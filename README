@@ -1,0 +1,25 @@
+==> One index should be created while creating the table itself.
+==> If the index was changed in between:
+    * Additional time would be taken to index the whole db.
+    * All the duplicate keys will be removed and only the latest one will remain.
+==> File name is as the tablename.
+
+
+==> Only one index allowed now.
+
+==> Table index will act like a write through cache. When ever the cache is updated the physical capy is also updated along with it.
+
+==> Have to load index if any of the operations are done.
+
+==> Free up spaces.
+
+==> Modification can be done using inserting a second time.
+
+==> Change the hash table to balanced tree.
+
+==> Test with large number of insertions
+
+
+
+==> Implement drop index DONE
+==> Test deletion DONE

@@ -1,0 +1,5 @@
+basedb*
+*.o
+misc/
+students
+try/
