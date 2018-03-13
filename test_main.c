@@ -27,6 +27,7 @@ char *commands[][100] = {
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"print", "students", NULL},
+                            {"select", "students", "sname", "xyz", NULL},
                             {"delete", "students", "sname", "xyz", NULL},
                             {"print", "students", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
@@ -53,12 +54,6 @@ int main ()
     printf("------------\n");
     while (commands[i][0])
     {
-        /*
-        for (int j=0; j<length(commands[i]); j++)
-            printf("%s ", commands[i][j]);
-        printf("\n");
-        */
-
         if (strcmp(commands[i][0], "create") == 0)
             createtable(length(commands[i]), commands[i]);
         else if (strcmp(commands[i][0], "print") == 0)
@@ -79,9 +74,15 @@ int main ()
             char *cmd[100] = {"delete", "students", "sname", t, "xyz", NULL};
             delete_table(length(cmd), cmd);
         }
-        /*
-            delete students sname operator value
-        */
+        else if (strcmp(commands[i][0], "select") == 0)
+        {
+            char t[100];
+            int tcode = 501;
+            memcpy(t, &tcode, sizeof(int));
+            char *cmd[100] = {"select", "students", "sname", t, "xyz", NULL};
+            select_table(length(cmd), cmd);
+        }
+
         for (int j=0; j<length(commands[i]); j++)
             printf("%s ", commands[i][j]);
         printf("\n");

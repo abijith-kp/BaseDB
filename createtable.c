@@ -564,9 +564,84 @@ void drop_index(int argc, char *argv[])
 
 void select_table(int argc, char *argv[])
 {
-    for (int i=0; i<argc; i++)
-        printf("%s ", argv[i]);
-    printf("\n");
+    char *table = argv[1];
+    char *attr = argv[2];
+    int operator = *(int *)argv[3];
+    char *value = argv[4];
+
+    if (!is_created(table))
+    {
+        printf("table not created!!\n");
+        return;
+    }
+
+    METADATA *metadata = read_metadata(table);
+
+    int fd = open(table, O_RDONLY);
+    
+    int pos=0;
+    int len=0;
+    char type = 'i';
+    for (int j=0; j<metadata->count; j++)
+    {
+        if (0 == strcmp(metadata->options[j], attr))
+        {
+            if (metadata->types[j] == 'i')
+                len = INT;
+            else if (metadata->types[j] == 's')
+                len = STRING;
+            type = metadata->types[j];
+            break;
+        }
+        else if (metadata->types[j] == 'i')
+            pos += INT;
+        else if (metadata->types[j] == 's')
+            pos += STRING;
+    }
+
+    for (int i=0; i<MAX_RECORDS; i++)
+    {
+        if (0 == metadata->records[i])
+            continue;
+
+        int offset = metadata->data_offset + (i * metadata->size) + pos;
+        lseek(fd, offset, SEEK_SET);
+        char *data = calloc(len, sizeof(char));
+        read(fd, data, len);
+        if (operation(data, operator, value, type))
+        {
+            offset = metadata->data_offset + (i * metadata->size) +
+                      metadata->key_offset;
+            lseek(fd, offset, SEEK_SET);
+
+            char *intv = calloc(INT, sizeof(char));
+            char *strv = calloc(STRING, sizeof(char));
+        
+            for (int j=0; j<metadata->count; j++)
+            {
+                if (metadata->types[j] == 'i')
+                {
+                    memset(intv, 0, INT);
+                    read(fd, intv, INT);
+                    printf("%s\t", intv);
+                }
+                else if (metadata->types[j] == 's')
+                {
+                    memset(strv, 0, STRING);
+                    read(fd, strv, STRING);
+                    printf("%s\t", strv);
+                }
+            }
+            printf("\n");
+            free(intv);
+            free(strv);
+        }
+        free(data);
+    }
+
+    close(fd);
+    write_metadata(metadata, table);
+
 }
 
 void help(int argc, char *argv[])
@@ -575,31 +650,40 @@ void help(int argc, char *argv[])
         printf("%s ", argv[i]);
     printf("\n");
 
+    /*
+        To be implemented:
+        createdb DBNAME;
+        destroydb DBNAME;
+        opendb DBNAME;
+        closedb;
+        destroy RELATION_NAME;
+        load RELATION_NAME from FILENAME;
+        project into RELATION_NAME from RELATION_NAME ( ATTR_NAME [ , ATTR_NAME ]* );
+        join into RELATION_NAME ( RELATION_NAME . ATTR_NAME, RELATION_NAME . ATTR_NAME );
+     */
+
     char *manual[100] = {
-                            /*"createdb DBNAME;",
-                            "destroydb DBNAME;",
-                            "opendb DBNAME;",
-                            "closedb;", */
-                            "quit;",
                             "create RELATION_NAME ( ATTR_NAME = FORMAT [ , ATTR_NAME = FORMAT ]* );",
-                            // "destroy RELATION_NAME;",
-                            // "load RELATION_NAME from FILENAME;",
+                            "\tCreate a new table with RELATION_NAME and attributes with given FORMAT.",
                             "print RELATION_NAME;",
+                            "\tDumps all data in the table with name RELATION_NAME"
                             "buildindex for RELATION_NAME on ATTR_NAME;",
                             "dropindex for RELATION_NAME [ on ATTR_NAME ];",
-                            "select into RELATION_NAME from RELATION_NAME where ( ATTR_NAME OP VALUE );",
-                            // "project into RELATION_NAME from RELATION_NAME ( ATTR_NAME [ , ATTR_NAME ]* );",
-                            //"join into RELATION_NAME ( RELATION_NAME . ATTR_NAME, RELATION_NAME . ATTR_NAME );",
+                            "select from RELATION_NAME where ( ATTR_NAME OP VALUE );",
                             "insert into RELATION_NAME ( ATTR_NAME = VALUE [ , ATTR_NAME = VALUE ]* );",
                             "delete from RELATION_NAME where ( ATTR_NAME OP VALUE );",
+                            "quit;",
+                            "help;",
+                            "\tTo print this help",
                             NULL
                         };
 
-    int i = 0;
-    while (manual[i])
-    {
+    printf("\nHELP:\n");
+    printf("\tRELATION_NAME: Table name. It would be same as the table file name.\n");
+    printf("\tATTR_NAME: Attribute name is the colomn name. String value.\n");
+    printf("\tVALUE: String or Integer.\n\n");
+    printf("\tFORMAT: For string data use \"s\" and for integer data use \"i\".\n\n");
+    for (int i=0; manual[i]; i++)
         printf("%s\n", manual[i]);
-        i++;
-    }
-
+    printf("\n");
 }
