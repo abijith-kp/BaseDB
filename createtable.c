@@ -70,6 +70,68 @@ int operation(char *data, int operator, char *value, char type)
     return 0;
 }
 
+void get_pos_len_type(METADATA *metadata, char *attr, int *pos, int *len, char *type, int *index)
+{
+    for (int j=0; j<metadata->count; j++)
+    {
+        if (0 == strcmp(metadata->options[j], attr))
+        {
+            if (len)
+            {
+                if (metadata->types[j] == 'i')
+                    *len = INT;
+                else if (metadata->types[j] == 's')
+                    *len = STRING;
+            }
+            if (type)
+                *type = metadata->types[j];
+            if (index)
+                *index = j;
+            break;
+        }
+        else if (metadata->types[j] == 'i')
+            *pos += INT;
+        else if (metadata->types[j] == 's')
+            *pos += STRING;
+    }
+}
+
+void print_header(METADATA *metadata)
+{
+    /* Printing the header */
+    for (int i=0; i<metadata->count; i++)
+        printf("%s\t", metadata->options[i]);
+    printf("\n");
+}
+
+char *read_cell(char *data, int fd, char type)
+{
+    int len = 0;
+    if (type == 'i')
+        len = INT;
+    else if (type == 's')
+        len = STRING;
+
+    if (!data)
+        data = calloc(len, sizeof(char));
+    memset(data, 0, len);
+    read(fd, data, len);
+    return data;
+}
+
+void print_row(METADATA *metadata, int fd, int index)
+{
+    int offset = metadata->data_offset + (index * metadata->size);
+    lseek(fd, offset, SEEK_SET);
+
+    for (int j=0; j<metadata->count; j++)
+    {
+        char *tmp = read_cell(NULL, fd, metadata->types[j]);
+        printf("%s\t", tmp);
+    }
+    printf("\n");
+}
+
 int is_created(char *table)
 {
     struct stat st;
@@ -98,22 +160,14 @@ void delete_table(int argc, char *argv[])
     int pos=0;
     int len=0;
     char type = 'i';
-    for (int j=0; j<metadata->count; j++)
-    {
-        if (0 == strcmp(metadata->options[j], attr))
-        {
-            if (metadata->types[j] == 'i')
-                len = INT;
-            else if (metadata->types[j] == 's')
-                len = STRING;
-            type = metadata->types[j];
-            break;
-        }
-        else if (metadata->types[j] == 'i')
-            pos += INT;
-        else if (metadata->types[j] == 's')
-            pos += STRING;
-    }
+    get_pos_len_type(metadata, attr, &pos, &len, &type, NULL);
+
+    int primary_key_len = 0;
+    if (metadata->types[metadata->primary_key] == 'i')
+        primary_key_len = INT;
+    else if (metadata->types[metadata->primary_key] == 's')
+        primary_key_len = STRING;
+    char *primary_key = calloc(primary_key_len, sizeof(char));
 
     for (int i=0; i<MAX_RECORDS; i++)
     {
@@ -126,28 +180,21 @@ void delete_table(int argc, char *argv[])
         read(fd, data, len);
         if (operation(data, operator, value, type))
         {
-            offset = metadata->data_offset + (i * metadata->size) +
-                      metadata->key_offset;
-            lseek(fd, offset, SEEK_SET);
-            if (metadata->types[metadata->primary_key] == 'i')
-            {
-                data = realloc(data, INT);
-                read(fd, data, INT);
-            }
-            else if (metadata->types[metadata->primary_key] == 's')
-            {
-                data = realloc(data, STRING);
-                read(fd, data, STRING);
-            }
-            
             metadata->records[i] = 0;
 
             if (metadata->is_indexed)
-                g_hash_table_remove(metadata->index, data);
+            {
+                offset = metadata->data_offset + (i * metadata->size) +
+                         metadata->key_offset;
+                lseek(fd, offset, SEEK_SET);
+                read(fd, primary_key, primary_key_len);
+                g_hash_table_remove(metadata->index, primary_key);
+            }
         }
         free(data);
     }
 
+    free(primary_key);
     close(fd);
     write_metadata(metadata, table);
 }
@@ -174,40 +221,13 @@ void dump_table(int argc, char *argv[])
     }
 
     METADATA *metadata = read_metadata(table);
+    print_header(metadata);
     
-    /* Printing the header */
-    for (int i=0; i<metadata->count; i++)
-        printf("%s\t", metadata->options[i]);
-    printf("\n");
-
     int fd = open(table, O_RDONLY);
     for (int i=0; i<MAX_RECORDS; i++)
     {
-        if (0 == metadata->records[i])
-            continue;
-        int offset = metadata->data_offset + (i * metadata->size);
-        lseek(fd, offset, SEEK_SET);
-        char *intv = calloc(INT, sizeof(char));
-        char *strv = calloc(STRING, sizeof(char));
-        
-        for (int j=0; j<metadata->count; j++)
-        {
-            if (metadata->types[j] == 'i')
-            {
-                memset(intv, 0, INT);
-                read(fd, intv, INT);
-                printf("%s\t", intv);
-            }
-            else if (metadata->types[j] == 's')
-            {
-                memset(strv, 0, STRING);
-                read(fd, strv, STRING);
-                printf("%s\t", strv);
-            }
-        }
-        printf("\n");
-        free(intv);
-        free(strv);
+        if (0 != metadata->records[i])
+            print_row(metadata, fd, i);
     }
     close(fd);
 }
@@ -215,7 +235,6 @@ void dump_table(int argc, char *argv[])
 void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 {
     int fd = open(table, O_WRONLY);
-
     int offset = 0;
     
     if (pos >= 0)
@@ -291,20 +310,18 @@ void insert_table(int argc, char *argv[])
         char *t = calloc(TBL_NAME_SIZE, sizeof(char));
         for (int j=0; j<metadata->count; j++)
         {
-            if (strcmp(metadata->options[j], argv[i]) == 0)
-            {
-                if (metadata->types[j] == 'i')
-                {
-                    strncpy(t, argv[i+1], INT);
-                    data->types[j] = metadata->types[j];
-                }
-                else if (metadata->types[j] == 's')
-                {
-                    strncpy(t, argv[i+1], STRING);
-                    data->types[j] = metadata->types[j];
-                }
-                data->options[j] = t;
-            }
+            if (strcmp(metadata->options[j], argv[i]) != 0)
+                continue;
+
+            int len = STRING;
+            if (metadata->types[j] == 'i')
+                len = INT;
+            else if (metadata->types[j] == 's')
+                len = STRING;
+
+            strncpy(t, argv[i+1], len);
+            data->types[j] = metadata->types[j];
+            data->options[j] = t;
         }
     }
 
@@ -341,6 +358,7 @@ void write_metadata(METADATA *metadata, char *table)
     write(fd, &(data_offset), sizeof(data_offset));
     write(fd, &(metadata->count), sizeof(metadata->count));
     write(fd, &(metadata->size), sizeof(metadata->size));
+
     write(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     write(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     write(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
@@ -416,8 +434,9 @@ int createtable(int argc, char *argv[])
     metadata->primary_key = 0;
     metadata->size = 0;
     metadata->key_offset = 0;
+    metadata->count = (argc-2)/2;
 
-    char *types = calloc((argc-2)/2, sizeof(char));
+    char *types = calloc(metadata->count, sizeof(char));
 
     for (int i=2; i<argc; i+=2)
     {
@@ -432,7 +451,6 @@ int createtable(int argc, char *argv[])
     }
 
     metadata->types = types;
-    metadata->count = (argc-2)/2;
 
     write_metadata(metadata, table);
     add_table_index(table, metadata);
@@ -479,22 +497,9 @@ GHashTable *load_index(char *table, METADATA *metadata)
         int offset = metadata->data_offset +
                      (i * metadata->size) +
                      metadata->key_offset;
-
         lseek(fd, offset, SEEK_SET);
-        char *key = NULL;
-        if (metadata->types[metadata->primary_key] == 'i')
-        {
-            key = calloc(INT, sizeof(char));
-            memset(key, 0, INT);
-            read(fd, key, INT);
-        }
-        else
-        {
-            key = calloc(STRING, sizeof(char));
-            memset(key, 0, STRING);
-            read(fd, key, STRING);
-        }
-        
+        char *key = read_cell(NULL, fd, metadata->types[metadata->primary_key]);
+
         gpointer val;
         gboolean ret = g_hash_table_lookup_extended(index, key, NULL, &val);
         if ((ret) || (0 == strlen(key)))
@@ -523,20 +528,7 @@ void build_index(int argc, char *argv[])
     metadata->is_indexed = 1;
     metadata->primary_key = 0;
     metadata->key_offset = 0;
-    
-    for (int i=0; i<metadata->count; i++)
-    {
-        if (strcmp(attr, metadata->options[i]) == 0)
-        {
-            metadata->primary_key = i;
-            break;
-        }
-
-        if (metadata->types[i] == 'i')
-            metadata->key_offset += INT;
-        else if (metadata->types[i] == 's')
-            metadata->key_offset += STRING;
-    }
+    get_pos_len_type(metadata, attr, &(metadata->key_offset), NULL, NULL, &(metadata->primary_key));
 
     metadata->index = load_index(table, metadata);
     write_metadata(metadata, table);
@@ -582,23 +574,9 @@ void select_table(int argc, char *argv[])
     int pos=0;
     int len=0;
     char type = 'i';
-    for (int j=0; j<metadata->count; j++)
-    {
-        if (0 == strcmp(metadata->options[j], attr))
-        {
-            if (metadata->types[j] == 'i')
-                len = INT;
-            else if (metadata->types[j] == 's')
-                len = STRING;
-            type = metadata->types[j];
-            break;
-        }
-        else if (metadata->types[j] == 'i')
-            pos += INT;
-        else if (metadata->types[j] == 's')
-            pos += STRING;
-    }
+    get_pos_len_type(metadata, attr, &pos, &len, &type, NULL);
 
+    print_header(metadata);
     for (int i=0; i<MAX_RECORDS; i++)
     {
         if (0 == metadata->records[i])
@@ -608,34 +586,10 @@ void select_table(int argc, char *argv[])
         lseek(fd, offset, SEEK_SET);
         char *data = calloc(len, sizeof(char));
         read(fd, data, len);
-        if (operation(data, operator, value, type))
-        {
-            offset = metadata->data_offset + (i * metadata->size) +
-                      metadata->key_offset;
-            lseek(fd, offset, SEEK_SET);
 
-            char *intv = calloc(INT, sizeof(char));
-            char *strv = calloc(STRING, sizeof(char));
-        
-            for (int j=0; j<metadata->count; j++)
-            {
-                if (metadata->types[j] == 'i')
-                {
-                    memset(intv, 0, INT);
-                    read(fd, intv, INT);
-                    printf("%s\t", intv);
-                }
-                else if (metadata->types[j] == 's')
-                {
-                    memset(strv, 0, STRING);
-                    read(fd, strv, STRING);
-                    printf("%s\t", strv);
-                }
-            }
-            printf("\n");
-            free(intv);
-            free(strv);
-        }
+        if (operation(data, operator, value, type))
+            print_row(metadata, fd, i);
+
         free(data);
     }
 
