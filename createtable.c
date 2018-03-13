@@ -32,40 +32,25 @@ void *get_table_index(char *table)
 
 int operation(char *data, int operator, char *value, char type)
 {
-    if (type == 'i')
-    {
-        int d = atoi(data);
-        int v = atoi(value);
+    int s = 0;
 
-        if (EQOP == operator)
-            return d == v;
-        else if (GEOP == operator)
-            return d >= v;
-        else if (GTOP == operator)
-            return d > v;
-        else if (LEOP == operator)
-            return d <= v;
-        else if (LTOP == operator)
-            return d < v;
-        else if (NOTEQOP == operator)
-            return d != v;
-    }
+    if (type == 'i')
+        s = atoi(data) - atoi(value);
     else if (type == 's')
-    {
-        int s = strncmp(data, value, STRING);
-        if (EQOP == operator)
-            return s == 0;
-        else if (GEOP == operator)
-            return (s >= 1);
-        else if (GTOP == operator)
-            return s >= 1;
-        else if (LEOP == operator)
-            return (s <= 0);
-        else if (LTOP == operator)
-            return s <= -1;
-        else if (NOTEQOP == operator)
-            return s != 0;
-    }
+        s = strncmp(data, value, STRING);
+
+    if (EQOP == operator)
+        return s == 0;
+    else if (GEOP == operator)
+        return (s >= 0);
+    else if (GTOP == operator)
+        return s > 0;
+    else if (LEOP == operator)
+        return (s <= 0);
+    else if (LTOP == operator)
+        return s < 0;
+    else if (NOTEQOP == operator)
+        return s != 0;
 
     return 0;
 }

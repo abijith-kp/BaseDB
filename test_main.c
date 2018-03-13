@@ -27,14 +27,27 @@ char *commands[][100] = {
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"print", "students", NULL},
-                            {"select", "students", "sname", "xyz", NULL},
+                            {"select", "students", "sname", "=", "xyz", NULL},
                             {"buildindex", "students", "sname", NULL},
-                            {"select", "students", "sname", "xyz", NULL},
+                            {"select", "students", "sname", "=", "xyz", NULL},
                             {"delete", "students", "sname", "xyz", NULL},
                             {"print", "students", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11", NULL},
                             {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11", NULL},
+
+                            {"insert", "students", "sname", "a", "sid", "2", "gpa", "11", NULL},
+                            {"insert", "students", "sname", "b", "sid", "2", "gpa", "11", NULL},
+                            {"insert", "students", "sname", "c", "sid", "3", "gpa", "12", NULL},
+                            {"insert", "students", "sname", "d", "sid", "1", "gpa", "11", NULL},
+                            {"print", "students", NULL},
+                            {"select", "students", "sid", "=", "2", NULL},
+                            {"select", "students", "sid", "<=", "2", NULL},
+                            {"select", "students", "sid", ">=", "2", NULL},
+                            {"select", "students", "sid", "<", "2", NULL},
+                            {"select", "students", "sid", ">", "2", NULL},
+                            {"select", "students", "sid", "<>", "2", NULL},
+
                             {"print", "students", NULL},
                             {"quit", NULL},
                             {NULL}
@@ -80,10 +93,23 @@ int main ()
         }
         else if (strcmp(commands[i][0], "select") == 0)
         {
-            char t[100];
             int tcode = 501;
+            if (strcmp(commands[i][3], "=") == 0)
+                tcode = 501;
+            else if (strcmp(commands[i][3], "<=") == 0)
+                tcode = 504;
+            else if (strcmp(commands[i][3], "<") == 0)
+                tcode = 506;
+            else if (strcmp(commands[i][3], ">=") == 0)
+                tcode = 502;
+            else if (strcmp(commands[i][3], ">") == 0)
+                tcode = 503;
+            else if (strcmp(commands[i][3], "<>") == 0)
+                tcode = 505;
+
+            char t[100];
             memcpy(t, &tcode, sizeof(int));
-            char *cmd[100] = {"select", "students", "sname", t, "xyz", NULL};
+            char *cmd[100] = {commands[i][0], commands[i][1], commands[i][2], t, commands[i][4], NULL};
             select_table(length(cmd), cmd);
         }
 
