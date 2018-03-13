@@ -41,3 +41,5 @@ void build_index(int argc, char *argv[]);
 void drop_index(int argc, char *argv[]);
 void quit(int argc, char *argv[]);
 GHashTable *load_index(char *table, METADATA *metadata);
+void select_table(int argc, char *argv[]);
+void help(int argc, char *argv[]);

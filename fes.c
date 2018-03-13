@@ -56,22 +56,22 @@ PARSER_TABLE table [21] [20] = {
 {	{	0,	QUIT,		EAT1,		0	},
 	{	1,	SEMI,		DONE,		0	}	},
 {	{	0,	SELECT,		EAT1,		0	},
-	{	1,	INTO,		THROW,		0	},
-	{	1,	STR,		EAT1,		0	},
+	/*{	1,	INTO,		THROW,		0	},
+	{	1,	STR,		EAT1,		0	},*/
 	{	1,	FROM,		THROW,		0	},
 	{	1,	STR,		EAT1,		0	},
 	{	1,	WHERE,		THROW,		0	},
 	{	1,	LPARAN,		THROW,		0	},
 	{	1,	STR,		EAT1,		0	},
-	{	1,	EQOP,		EAT3,		14	},
-	{	0,	GEOP,		EAT3,		14	},
-	{	0,	GTOP,		EAT3,		14	},
-	{	0,	LEOP,		EAT3,		14	},
-	{	0,	NOTEQOP,	EAT3,		14	},
+	{	1,	EQOP,		EAT3,		12	},
+	{	0,	GEOP,		EAT3,		12	},
+	{	0,	GTOP,		EAT3,		12	},
+	{	0,	LEOP,		EAT3,		12	},
+	{	0,	NOTEQOP,	EAT3,		12	},
 	{	0,	LTOP,		EAT3,		0	},
-	{	1,	NUMBER,		EAT1,		16	},
+	{	1,	NUMBER,		EAT1,		14	},
 	{	0,	QUOTEDSTR,	EAT1,		0	},
-	{	1, 	AND,		THROW,		8	},
+	{	1, 	AND,		THROW,		5	},
 	{	0,	RPARAN,		THROW,		0	},
 	{	1,	SEMI,		DONE,		0	}	},
 {	{	0,	PROJECT,	EAT1,		0	},
@@ -146,7 +146,7 @@ PARSER_TABLE table [21] [20] = {
 	{	1,	RPARAN,		THROW,		0	},
 	{	1,	SEMI,		DONE,		0	}	},
 {	{	0,	HELP,		EAT1,		0	},
-	{	1,	STR,		EAT1,		0	},
+	//{	1,	STR,		EAT1,		0	},
 	{	1,	SEMI,		DONE,		0	}	},
 {	{	0,	BUILDINDEX,	EAT1,		0	},
 	{	1,	FOR,		THROW,		0	},
@@ -331,10 +331,10 @@ int tcode;
 	    case DELETE :
 		delete_table(pcount, ptr);
 		break;
-		/*
 	    case SELECT :
-		Select (pcount, ptr);
+		select_table(pcount, ptr);
 		break;
+		/*
 	    case CREATEDB :
 		CreateDB (pcount, ptr);
 		break;
@@ -371,10 +371,10 @@ int tcode;
 	    case UNIONOP :
 		printf ("union not yet implemented\n");
 		break;
-	    case HELP :
-		printf ("help not yet implemented\n");
-		break;
              */
+	    case HELP :
+		help(pcount, ptr);
+		break;
 	}
 	return (CONTINUE);
 } /* processquery */

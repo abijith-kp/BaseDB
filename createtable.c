@@ -561,3 +561,45 @@ void drop_index(int argc, char *argv[])
     metadata->index = NULL;
     write_metadata(metadata, table);
 }
+
+void select_table(int argc, char *argv[])
+{
+    for (int i=0; i<argc; i++)
+        printf("%s ", argv[i]);
+    printf("\n");
+}
+
+void help(int argc, char *argv[])
+{
+    for (int i=0; i<argc; i++)
+        printf("%s ", argv[i]);
+    printf("\n");
+
+    char *manual[100] = {
+                            /*"createdb DBNAME;",
+                            "destroydb DBNAME;",
+                            "opendb DBNAME;",
+                            "closedb;", */
+                            "quit;",
+                            "create RELATION_NAME ( ATTR_NAME = FORMAT [ , ATTR_NAME = FORMAT ]* );",
+                            // "destroy RELATION_NAME;",
+                            // "load RELATION_NAME from FILENAME;",
+                            "print RELATION_NAME;",
+                            "buildindex for RELATION_NAME on ATTR_NAME;",
+                            "dropindex for RELATION_NAME [ on ATTR_NAME ];",
+                            "select into RELATION_NAME from RELATION_NAME where ( ATTR_NAME OP VALUE );",
+                            // "project into RELATION_NAME from RELATION_NAME ( ATTR_NAME [ , ATTR_NAME ]* );",
+                            //"join into RELATION_NAME ( RELATION_NAME . ATTR_NAME, RELATION_NAME . ATTR_NAME );",
+                            "insert into RELATION_NAME ( ATTR_NAME = VALUE [ , ATTR_NAME = VALUE ]* );",
+                            "delete from RELATION_NAME where ( ATTR_NAME OP VALUE );",
+                            NULL
+                        };
+
+    int i = 0;
+    while (manual[i])
+    {
+        printf("%s\n", manual[i]);
+        i++;
+    }
+
+}
