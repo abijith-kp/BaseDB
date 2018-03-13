@@ -70,29 +70,31 @@ int operation(char *data, int operator, char *value, char type)
     return 0;
 }
 
+void get_type_size(int *len, char type)
+{
+    if (type == 'i')
+        *len = INT;
+    else if (type == 's')
+        *len = STRING;
+}
+
 void get_pos_len_type(METADATA *metadata, char *attr, int *pos, int *len, char *type, int *index)
 {
     for (int j=0; j<metadata->count; j++)
     {
+        int l = 0;
+        get_type_size(&l, metadata->types[j]);
         if (0 == strcmp(metadata->options[j], attr))
         {
             if (len)
-            {
-                if (metadata->types[j] == 'i')
-                    *len = INT;
-                else if (metadata->types[j] == 's')
-                    *len = STRING;
-            }
+                *len = l;
             if (type)
                 *type = metadata->types[j];
             if (index)
                 *index = j;
             break;
         }
-        else if (metadata->types[j] == 'i')
-            *pos += INT;
-        else if (metadata->types[j] == 's')
-            *pos += STRING;
+        *pos += l;
     }
 }
 
@@ -107,10 +109,7 @@ void print_header(METADATA *metadata)
 char *read_cell(char *data, int fd, char type)
 {
     int len = 0;
-    if (type == 'i')
-        len = INT;
-    else if (type == 's')
-        len = STRING;
+    get_type_size(&len, type);
 
     if (!data)
         data = calloc(len, sizeof(char));
@@ -163,10 +162,7 @@ void delete_table(int argc, char *argv[])
     get_pos_len_type(metadata, attr, &pos, &len, &type, NULL);
 
     int primary_key_len = 0;
-    if (metadata->types[metadata->primary_key] == 'i')
-        primary_key_len = INT;
-    else if (metadata->types[metadata->primary_key] == 's')
-        primary_key_len = STRING;
+    get_type_size(&primary_key_len, metadata->types[metadata->primary_key]);
     char *primary_key = calloc(primary_key_len, sizeof(char));
 
     for (int i=0; i<MAX_RECORDS; i++)
@@ -252,29 +248,26 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
     lseek(fd, offset, SEEK_SET);
     for (int i=0; i<metadata->count; i++)
     {
-        if ((data->options[i]) && (data->types[i] == 'i'))
-            write(fd, data->options[i], INT);
-        else if ((data->options[i]) && (data->types[i] == 's'))
-            write(fd, data->options[i], STRING);
-        else if (NULL == data->options[i])
+        if (NULL == data->options[i])
         {
-            void *t = NULL;
+            int len = 0;
             if (metadata->types[i] == 'i')
-            {
-                t = calloc(INT, sizeof(char));
-                write(fd, t, INT);
-            }
+                len = INT;
             else if (metadata->types[i] == 's')
-            {
-                t = calloc(STRING, sizeof(char));
-                write(fd, t, STRING);
-            }
+                len = STRING;
+            void *t = calloc(len, sizeof(char));
+            write(fd, t, len);
             free(t);
+        }
+        else
+        {
+            int t = 0;
+            get_type_size(&t, data->types[i]);
+            write(fd, data->options[i], t);
         }
     }
 
-    offset = (offset - metadata->data_offset)/(metadata->size);
-    int index = offset;
+    int index = (offset - metadata->data_offset)/(metadata->size);
     metadata->records[index] = 1;
 
     if (metadata->is_indexed)
@@ -314,11 +307,7 @@ void insert_table(int argc, char *argv[])
                 continue;
 
             int len = STRING;
-            if (metadata->types[j] == 'i')
-                len = INT;
-            else if (metadata->types[j] == 's')
-                len = STRING;
-
+            get_type_size(&len, metadata->types[j]);
             strncpy(t, argv[i+1], len);
             data->types[j] = metadata->types[j];
             data->options[j] = t;
@@ -437,6 +426,7 @@ int createtable(int argc, char *argv[])
     metadata->count = (argc-2)/2;
 
     char *types = calloc(metadata->count, sizeof(char));
+    int s = 0;
 
     for (int i=2; i<argc; i+=2)
     {
@@ -444,14 +434,11 @@ int createtable(int argc, char *argv[])
         strncpy(t, argv[i], TBL_NAME_SIZE);
         metadata->options[(i-2)/2] = t;
         types[(i-2)/2] = argv[i+1][0];
-        if (argv[i+1][0] == 'i')
-            metadata->size += INT;
-        else if (argv[i+1][0] == 's')
-            metadata->size += STRING;
+        get_type_size(&s, argv[i+1][0]);
+        metadata->size += s;
     }
 
     metadata->types = types;
-
     write_metadata(metadata, table);
     add_table_index(table, metadata);
 
