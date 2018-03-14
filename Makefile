@@ -1,7 +1,7 @@
 OPTIONS=`pkg-config --cflags --libs glib-2.0` -g
 OBJS=createtable.o main.o fes.o test_main.o
 EXECS=basedb basedb_test
-TEST_DB=students
+TEST_DB=students employee
 
 all: basedb
 

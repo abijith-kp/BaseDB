@@ -360,8 +360,7 @@ METADATA *read_metadata(char *table)
 
     if (metadata)
         return metadata;
-    else
-        metadata = calloc(1, sizeof(METADATA));
+    metadata = calloc(1, sizeof(METADATA));
 
     int fd = open(table, O_RDONLY);
 
