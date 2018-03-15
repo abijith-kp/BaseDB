@@ -150,10 +150,12 @@ void delete_table(int argc, char *argv[])
     get_type_size(&primary_key_len, metadata->types[metadata->primary_key]);
     char *primary_key = calloc(primary_key_len, sizeof(char));
 
-    for (int i=0; i<MAX_RECORDS; i++)
+    // for (int i=0; i<MAX_RECORDS; i++)
+    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
     {
-        if (0 == metadata->records[i])
-            continue;
+    printf("%d ", i);
+        // if (0 == metadata->records[i])
+        //    continue;
 
         int offset = metadata->data_offset + (i * metadata->size) + pos;
         lseek(fd, offset, SEEK_SET);
@@ -181,6 +183,7 @@ void delete_table(int argc, char *argv[])
     write_metadata(metadata, table);
 }
 
+/*
 int get_next_free_offset(METADATA *metadata)
 {
     for (int i=0; i<MAX_RECORDS; i++)
@@ -190,6 +193,17 @@ int get_next_free_offset(METADATA *metadata)
     }
 
     return -1;
+}
+*/
+
+int get_next_free_offset(METADATA *metadata)
+{
+    if (metadata->free == -1)
+        return -1;
+
+    int i = insert(metadata->records_ll, &(metadata->free),
+                           &(metadata->head));
+    return i * metadata->size;
 }
 
 void dump_table(int argc, char *argv[])
@@ -206,9 +220,10 @@ void dump_table(int argc, char *argv[])
     print_header(metadata);
     
     int fd = open(table, O_RDONLY);
-    for (int i=0; i<MAX_RECORDS; i++)
+    //for (int i=0; i<MAX_RECORDS; i++)
+    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
     {
-        if (0 != metadata->records[i])
+        //if (0 != metadata->records[i])
             print_row(metadata, fd, i);
     }
     close(fd);
@@ -256,9 +271,6 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 
     int index = (offset - metadata->data_offset)/(metadata->size);
     metadata->records[index] = 1;
-    if (pos == -1)
-        offset_ll = insert(metadata->records_ll, &(metadata->free),
-                           &(metadata->head));
 
     if (metadata->is_indexed)
         g_hash_table_insert(metadata->index,
@@ -487,10 +499,11 @@ GHashTable *load_index(char *table, METADATA *metadata)
     GHashTable *index = g_hash_table_new(g_str_hash, g_str_equal);
     
     int fd = open(table, O_RDONLY);
-    for (int i=0; i<MAX_RECORDS; i++)
+    // for (int i=0; i<MAX_RECORDS; i++)
+    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
     {
-        if (!(metadata->records[i]))
-            continue;
+        //if (!(metadata->records[i]))
+        //    continue;
         
         int offset = metadata->data_offset +
                      (i * metadata->size) +
@@ -578,10 +591,11 @@ void select_table(int argc, char *argv[])
     get_pos_len_type(metadata, attr, &pos, &len, &type, NULL);
 
     print_header(metadata);
-    for (int i=0; i<MAX_RECORDS; i++)
+    // for (int i=0; i<MAX_RECORDS; i++)
+    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
     {
-        if (0 == metadata->records[i])
-            continue;
+        //if (0 == metadata->records[i])
+        //    continue;
 
         int offset = metadata->data_offset + (i * metadata->size) + pos;
         lseek(fd, offset, SEEK_SET);
