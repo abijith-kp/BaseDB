@@ -454,7 +454,6 @@ void save_metadata(void *key, void *value, void *user_data)
 {
     printf("Closing all the caches for %s...\n", key);
     METADATA *t = value;
-    print_list(t->records, t->free, t->head, t->start);
     uninit_list(t->records, MAX_RECORDS);
 }
 
