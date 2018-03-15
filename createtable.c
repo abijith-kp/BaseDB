@@ -150,21 +150,18 @@ void delete_table(int argc, char *argv[])
     get_type_size(&primary_key_len, metadata->types[metadata->primary_key]);
     char *primary_key = calloc(primary_key_len, sizeof(char));
 
-    // for (int i=0; i<MAX_RECORDS; i++)
-    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
+    int i=metadata->start;
+    while (i != -1)
     {
-    printf("%d ", i);
-        // if (0 == metadata->records[i])
-        //    continue;
-
         int offset = metadata->data_offset + (i * metadata->size) + pos;
         lseek(fd, offset, SEEK_SET);
         char *data = calloc(len, sizeof(char));
         read(fd, data, len);
+        int _i = metadata->records[i]->prev;
         if (operation(data, operator, value, type))
         {
-            metadata->records[i] = 0;
-            delete_with_index(i, metadata->records_ll, &(metadata->free), &(metadata->head));
+            delete_with_index(i, metadata->records, &(metadata->free),
+            &(metadata->head), &(metadata->start));
 
             if (metadata->is_indexed)
             {
@@ -176,6 +173,7 @@ void delete_table(int argc, char *argv[])
             }
         }
         free(data);
+        i = _i;
     }
 
     free(primary_key);
@@ -183,26 +181,13 @@ void delete_table(int argc, char *argv[])
     write_metadata(metadata, table);
 }
 
-/*
-int get_next_free_offset(METADATA *metadata)
-{
-    for (int i=0; i<MAX_RECORDS; i++)
-    {
-        if (!(metadata->records[i]))
-            return i * metadata->size;
-    }
-
-    return -1;
-}
-*/
-
 int get_next_free_offset(METADATA *metadata)
 {
     if (metadata->free == -1)
         return -1;
 
-    int i = insert(metadata->records_ll, &(metadata->free),
-                           &(metadata->head));
+    int i = insert(metadata->records, &(metadata->free),
+                           &(metadata->head), &(metadata->start));
     return i * metadata->size;
 }
 
@@ -220,12 +205,8 @@ void dump_table(int argc, char *argv[])
     print_header(metadata);
     
     int fd = open(table, O_RDONLY);
-    //for (int i=0; i<MAX_RECORDS; i++)
-    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
-    {
-        //if (0 != metadata->records[i])
-            print_row(metadata, fd, i);
-    }
+    for (int i=metadata->start; i!=-1; i=(metadata->records[i])->prev)
+        print_row(metadata, fd, i);
     close(fd);
 }
 
@@ -250,27 +231,19 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
     lseek(fd, offset, SEEK_SET);
     for (int i=0; i<metadata->count; i++)
     {
+        int len = 0;
+        get_type_size(&len, metadata->types[i]);
         if (NULL == data->options[i])
         {
-            int len = 0;
-            if (metadata->types[i] == 'i')
-                len = INT;
-            else if (metadata->types[i] == 's')
-                len = STRING;
-            void *t = calloc(len, sizeof(char));
-            write(fd, t, len);
-            free(t);
+            void *tmp = calloc(len, sizeof(char));
+            write(fd, tmp, len);
+            free(tmp);
         }
         else
-        {
-            int t = 0;
-            get_type_size(&t, data->types[i]);
-            write(fd, data->options[i], t);
-        }
+            write(fd, data->options[i], len);
     }
 
     int index = (offset - metadata->data_offset)/(metadata->size);
-    metadata->records[index] = 1;
 
     if (metadata->is_indexed)
         g_hash_table_insert(metadata->index,
@@ -360,12 +333,11 @@ void write_metadata(METADATA *metadata, char *table)
         write(fd, &(metadata->types[i]), TBL_TYPE_SIZE);
     }
 
-    write(fd, &(metadata->records), MAX_RECORDS);
-
-    save_list(metadata->records_ll, metadata->next, metadata->prev,
+    save_list(metadata->records, metadata->next, metadata->prev,
               MAX_RECORDS);
     write(fd, &(metadata->free), sizeof(metadata->free));
     write(fd, &(metadata->head), sizeof(metadata->head));
+    write(fd, &(metadata->start), sizeof(metadata->start));
     write(fd, &(metadata->next), sizeof(metadata->next));
     write(fd, &(metadata->prev), sizeof(metadata->prev));
 
@@ -404,14 +376,13 @@ METADATA *read_metadata(char *table)
         metadata->options[i] = t;
     }
 
-    read(fd, &(metadata->records), MAX_RECORDS);
-
     read(fd, &(metadata->free), sizeof(metadata->free));
     read(fd, &(metadata->head), sizeof(metadata->head));
+    read(fd, &(metadata->start), sizeof(metadata->start));
     read(fd, &(metadata->next), sizeof(metadata->next));
     read(fd, &(metadata->prev), sizeof(metadata->prev));
 
-    metadata->records_ll = init_list(metadata->next, metadata->prev,
+    metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 0);
 
     metadata->types = types;
@@ -435,7 +406,6 @@ int createtable(int argc, char *argv[])
     }
 
     metadata = calloc(1, sizeof(METADATA));
-    memset(metadata->records, 0, MAX_RECORDS);
     metadata->is_indexed = 0;
     metadata->primary_key = 0;
     metadata->size = 0;
@@ -443,8 +413,9 @@ int createtable(int argc, char *argv[])
     metadata->count = (argc-2)/2;
     metadata->free = 0;
     metadata->head = -1;
+    metadata->start = -1;
 
-    metadata->records_ll = init_list(metadata->next, metadata->prev,
+    metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 1);
 
     char *types = calloc(metadata->count, sizeof(char));
@@ -483,7 +454,8 @@ void save_metadata(void *key, void *value, void *user_data)
 {
     printf("Closing all the caches for %s...\n", key);
     METADATA *t = value;
-    print_list(t->records_ll, t->free, t->head);
+    print_list(t->records, t->free, t->head, t->start);
+    uninit_list(t->records, MAX_RECORDS);
 }
 
 void quit(int argc, char *argv[])
@@ -499,27 +471,26 @@ GHashTable *load_index(char *table, METADATA *metadata)
     GHashTable *index = g_hash_table_new(g_str_hash, g_str_equal);
     
     int fd = open(table, O_RDONLY);
-    // for (int i=0; i<MAX_RECORDS; i++)
-    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
+    int i=metadata->start;
+    while (i != -1)
     {
-        //if (!(metadata->records[i]))
-        //    continue;
-        
         int offset = metadata->data_offset +
                      (i * metadata->size) +
                      metadata->key_offset;
         lseek(fd, offset, SEEK_SET);
         char *key = read_cell(NULL, fd, metadata->types[metadata->primary_key]);
 
+        int _i = metadata->records[i]->prev;
         gpointer val;
         gboolean ret = g_hash_table_lookup_extended(index, key, NULL, &val);
         if ((ret) || (0 == strlen(key)))
         {
-            metadata->records[GPOINTER_TO_INT(val)] = 0;
-            delete_with_index(GPOINTER_TO_INT(val), metadata->records_ll, &(metadata->free), &(metadata->head));
+            delete_with_index(GPOINTER_TO_INT(val), metadata->records,
+            &(metadata->free), &(metadata->head), &(metadata->start));
         }
 
         g_hash_table_insert(index, key, GINT_TO_POINTER(i));
+        i = _i;
     }
 
     close(fd);
@@ -591,12 +562,8 @@ void select_table(int argc, char *argv[])
     get_pos_len_type(metadata, attr, &pos, &len, &type, NULL);
 
     print_header(metadata);
-    // for (int i=0; i<MAX_RECORDS; i++)
-    for (int i=metadata->head; i!=-1; i=(metadata->records_ll[i])->next)
+    for (int i=metadata->start; i!=-1; i=(metadata->records[i])->prev)
     {
-        //if (0 == metadata->records[i])
-        //    continue;
-
         int offset = metadata->data_offset + (i * metadata->size) + pos;
         lseek(fd, offset, SEEK_SET);
         char *data = calloc(len, sizeof(char));

@@ -17,17 +17,17 @@ typedef struct
     int count;
     int size;
     int data_offset;
-    char is_indexed;
     int primary_key;
     int key_offset;
-    char *options[TBL_NAME_SIZE];
-    char *types;
-    char records[MAX_RECORDS];
     int next[MAX_RECORDS];
     int prev[MAX_RECORDS];
     int free;
     int head;
-    LIST **records_ll;
+    int start;
+    char is_indexed;
+    char *options[TBL_NAME_SIZE];
+    char *types;
+    LIST **records;
     GHashTable *index;
 } METADATA;
 

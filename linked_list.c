@@ -3,11 +3,14 @@
 
 #include "linked_list.h"
 
-int insert(LIST **ll, int *free, int *head)
+int insert(LIST **ll, int *free, int *head, int *start)
 {
     int pos = *free;
     if (pos == -1)
         return -1;
+
+    if (*start == -1)
+        *start = pos;
 
     *free = ll[pos]->next;
     ll[pos]->next = *head;
@@ -19,11 +22,18 @@ int insert(LIST **ll, int *free, int *head)
     return pos;
 }
 
-void delete_with_index(int h, LIST **ll, int *free, int *head)
+void delete_with_index(int h, LIST **ll, int *free, int *head, int *start)
 {
+
+    if (h < 0)
+        return;
+    else if (h == *start)
+        *start = ll[h]->prev;
+
     if (h == *head)
     {
-        ll[ll[h]->next]->prev = -1;
+        if (ll[h]->next != -1)
+            ll[ll[h]->next]->prev = -1;
         *head = ll[h]->next;
         ll[h]->next = *free;
         *free = h;
@@ -53,12 +63,12 @@ void delete_with_index(int h, LIST **ll, int *free, int *head)
     }
 }
 
-void print_list(LIST **ll, int free, int head)
+void print_list(LIST **ll, int free, int head, int start)
 {
-    while (head != -1)
+    while (start != -1)
     {
-        printf("%d\t%d\t%d\n", head, ll[head]->next, ll[head]->prev);
-        head = ll[head]->next;
+        printf("%d\t%d\t%d\n", start, ll[start]->next, ll[start]->prev);
+        start = ll[start]->prev;
     }
     printf("\n\n");
 }
@@ -101,34 +111,3 @@ void uninit_list(LIST **ll, int count)
         free(ll[i]);
     free(ll);
 }
-
-/*
-int main_test()
-{
-    int next[count], prev[count];
-    for (int i=0; i<count; i++)
-    {
-        next[i] = i+1;
-        prev[i] = -1;
-    }
-    next[count-1] = -1;
-
-    LIST **ll = init_list(next, prev);
-    int free=0, head=-1;
-
-    for (int i=0; i<10; i++)
-    {
-        insert(ll, &free, &head);
-        insert(ll, &free, &head);
-    }
-
-    printf("f%d h%d\n\n", free, head);
-
-    print_list(ll, free, head);
-    for (int i=0; i<10; i++)
-        delete_with_index(i, ll, &free, &head);
-    print_list(ll, free, head);
-
-    return 0;
-}
-*/
