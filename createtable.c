@@ -162,6 +162,7 @@ void delete_table(int argc, char *argv[])
         if (operation(data, operator, value, type))
         {
             metadata->records[i] = 0;
+            delete_with_index(i, metadata->records_ll, &(metadata->free), &(metadata->head));
 
             if (metadata->is_indexed)
             {
@@ -217,7 +218,8 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 {
     int fd = open(table, O_WRONLY);
     int offset = 0;
-    
+    int offset_ll = 0;
+
     if (pos >= 0)
         offset = (pos * metadata->size);
     else
@@ -254,6 +256,9 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 
     int index = (offset - metadata->data_offset)/(metadata->size);
     metadata->records[index] = 1;
+    if (pos == -1)
+        offset_ll = insert(metadata->records_ll, &(metadata->free),
+                           &(metadata->head));
 
     if (metadata->is_indexed)
         g_hash_table_insert(metadata->index,
@@ -345,6 +350,13 @@ void write_metadata(METADATA *metadata, char *table)
 
     write(fd, &(metadata->records), MAX_RECORDS);
 
+    save_list(metadata->records_ll, metadata->next, metadata->prev,
+              MAX_RECORDS);
+    write(fd, &(metadata->free), sizeof(metadata->free));
+    write(fd, &(metadata->head), sizeof(metadata->head));
+    write(fd, &(metadata->next), sizeof(metadata->next));
+    write(fd, &(metadata->prev), sizeof(metadata->prev));
+
     data_offset = lseek(fd, 0, SEEK_CUR);
     data_offset += 10;
     lseek(fd, 0, SEEK_SET);
@@ -381,6 +393,15 @@ METADATA *read_metadata(char *table)
     }
 
     read(fd, &(metadata->records), MAX_RECORDS);
+
+    read(fd, &(metadata->free), sizeof(metadata->free));
+    read(fd, &(metadata->head), sizeof(metadata->head));
+    read(fd, &(metadata->next), sizeof(metadata->next));
+    read(fd, &(metadata->prev), sizeof(metadata->prev));
+
+    metadata->records_ll = init_list(metadata->next, metadata->prev,
+                                     MAX_RECORDS, 0);
+
     metadata->types = types;
     close(fd);
 
@@ -408,6 +429,11 @@ int createtable(int argc, char *argv[])
     metadata->size = 0;
     metadata->key_offset = 0;
     metadata->count = (argc-2)/2;
+    metadata->free = 0;
+    metadata->head = -1;
+
+    metadata->records_ll = init_list(metadata->next, metadata->prev,
+                                     MAX_RECORDS, 1);
 
     char *types = calloc(metadata->count, sizeof(char));
     int s = 0;
@@ -443,8 +469,9 @@ void print_metadata(METADATA *metadata)
 
 void save_metadata(void *key, void *value, void *user_data)
 {
-    printf("Closing all the caches...\n");
-    // write_metadata(value, key);
+    printf("Closing all the caches for %s...\n", key);
+    METADATA *t = value;
+    print_list(t->records_ll, t->free, t->head);
 }
 
 void quit(int argc, char *argv[])
@@ -474,7 +501,10 @@ GHashTable *load_index(char *table, METADATA *metadata)
         gpointer val;
         gboolean ret = g_hash_table_lookup_extended(index, key, NULL, &val);
         if ((ret) || (0 == strlen(key)))
+        {
             metadata->records[GPOINTER_TO_INT(val)] = 0;
+            delete_with_index(GPOINTER_TO_INT(val), metadata->records_ll, &(metadata->free), &(metadata->head));
+        }
 
         g_hash_table_insert(index, key, GINT_TO_POINTER(i));
     }
@@ -566,7 +596,6 @@ void select_table(int argc, char *argv[])
 
     close(fd);
     write_metadata(metadata, table);
-
 }
 
 void help(int argc, char *argv[])
@@ -575,23 +604,11 @@ void help(int argc, char *argv[])
         printf("%s ", argv[i]);
     printf("\n");
 
-    /*
-        To be implemented:
-        createdb DBNAME;
-        destroydb DBNAME;
-        opendb DBNAME;
-        closedb;
-        destroy RELATION_NAME;
-        load RELATION_NAME from FILENAME;
-        project into RELATION_NAME from RELATION_NAME ( ATTR_NAME [ , ATTR_NAME ]* );
-        join into RELATION_NAME ( RELATION_NAME . ATTR_NAME, RELATION_NAME . ATTR_NAME );
-     */
-
     char *manual[100] = {
                             "create RELATION_NAME ( ATTR_NAME = FORMAT [ , ATTR_NAME = FORMAT ]* );",
-                            "\tCreate a new table with RELATION_NAME and attributes with given FORMAT.",
+                            "\tCreate a new table with RELATION_NAME and attributes with given FORMAT.\n",
                             "print RELATION_NAME;",
-                            "\tDumps all data in the table with name RELATION_NAME"
+                            "\tDumps all data in the table with name RELATION_NAME\n"
                             "buildindex for RELATION_NAME on ATTR_NAME;",
                             "dropindex for RELATION_NAME [ on ATTR_NAME ];",
                             "select from RELATION_NAME where ( ATTR_NAME OP VALUE );",

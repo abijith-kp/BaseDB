@@ -19,7 +19,16 @@
 
 ==> Test with large number of insertions
 
-
+        To be implemented:
+        createdb DBNAME;
+        destroydb DBNAME;
+        opendb DBNAME;
+        closedb;
+        destroy RELATION_NAME;
+        load RELATION_NAME from FILENAME;
+        project into RELATION_NAME from RELATION_NAME ( ATTR_NAME [ , ATTR_NAME ]* );
+        join into RELATION_NAME ( RELATION_NAME . ATTR_NAME, RELATION_NAME . ATTR_NAME );
+ 
 
 ==> Implement drop index DONE
 ==> Test deletion DONE

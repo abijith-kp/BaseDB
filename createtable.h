@@ -1,5 +1,7 @@
 #include <gmodule.h>
 
+#include "linked_list.h"
+
 #define TBL_NAME_SIZE 50
 #define TBL_TYPE_SIZE sizeof(char)
 #define MAX_RECORDS 1024
@@ -21,6 +23,11 @@ typedef struct
     char *options[TBL_NAME_SIZE];
     char *types;
     char records[MAX_RECORDS];
+    int next[MAX_RECORDS];
+    int prev[MAX_RECORDS];
+    int free;
+    int head;
+    LIST **records_ll;
     GHashTable *index;
 } METADATA;
 

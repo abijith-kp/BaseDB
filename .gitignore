@@ -2,4 +2,5 @@ basedb*
 *.o
 misc/
 students
+employee
 try/

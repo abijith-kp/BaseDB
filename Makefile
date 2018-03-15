@@ -1,5 +1,5 @@
 OPTIONS=`pkg-config --cflags --libs glib-2.0` -g
-OBJS=createtable.o main.o fes.o test_main.o
+OBJS=linked_list.o createtable.o main.o fes.o test_main.o
 EXECS=basedb basedb_test
 TEST_DB=students employee
 
@@ -12,11 +12,11 @@ run_test: test
 	rm -rf ${TEST_DB}
 	./basedb_test
 
-basedb: createtable fes main
-	gcc ${OPTIONS} createtable.o main.c fes.o -o basedb
+basedb: createtable fes main linked_list
+	gcc ${OPTIONS} linked_list.o createtable.o main.c fes.o -o basedb
 
-test: createtable test_main
-	gcc ${OPTIONS} createtable.o test_main.c -o basedb_test
+test: createtable test_main linked_list
+	gcc ${OPTIONS} linked_list.o createtable.o test_main.c -o basedb_test
 
 createtable:
 	gcc ${OPTIONS} -c createtable.c -o createtable.o
@@ -29,6 +29,9 @@ main:
 
 test_main:
 	gcc ${OPTIONS} -c test_main.c -o test_main.o
+
+linked_list:
+	gcc ${OPTIONS} -c linked_list.c -o linked_list.o
 
 clean:
 	rm -rf ${EXECS} ${OBJS} ${TEST_DB}
