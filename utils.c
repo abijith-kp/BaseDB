@@ -55,7 +55,7 @@ void delete_index(METADATA *metadata, int index)
     }
 }
 
-char *read_row(METADATA *metadata, int fd, int index, int block_size)
+char *read_row(METADATA *metadata, int fd, int index)
 {
     int offset = metadata->data_offset + (index * metadata->size);
     lseek(fd, offset, SEEK_SET);
@@ -64,8 +64,8 @@ char *read_row(METADATA *metadata, int fd, int index, int block_size)
     int t = 0;
     for (int i=0; i<metadata->block_count-1; i++)
     {
-        read(fd, buffer+t, block_size);
-        t += block_size;
+        read(fd, buffer+t, BLOCK_SIZE);
+        t += BLOCK_SIZE;
         index = metadata->records[index]->next;
         offset = metadata->data_offset + (index * metadata->size);
         lseek(fd, offset, SEEK_SET);
@@ -75,8 +75,7 @@ char *read_row(METADATA *metadata, int fd, int index, int block_size)
     return buffer;
 }
 
-void write_row(METADATA *metadata, char *buffer, int fd, int index, int
-block_size)
+void write_row(METADATA *metadata, char *buffer, int fd, int index)
 {
     int offset = metadata->data_offset + (index * metadata->size);
     lseek(fd, offset, SEEK_SET);
@@ -84,8 +83,8 @@ block_size)
     int t = 0;
     for (int i=0; i<metadata->block_count-1; i++)
     {
-        write(fd, buffer+t, block_size);
-        t += block_size;
+        write(fd, buffer+t, BLOCK_SIZE);
+        t += BLOCK_SIZE;
         index = metadata->records[index]->next;
         offset = metadata->data_offset + (index * metadata->size);
         lseek(fd, offset, SEEK_SET);
@@ -94,9 +93,9 @@ block_size)
     write(fd, buffer+t, (metadata->size - t));
 }
 
-METADATA *get_row_as_data_struct(METADATA *metadata, int fd, int index, int block_size)
+METADATA *get_row_as_data_struct(METADATA *metadata, int fd, int index)
 {
-    char *buffer = read_row(metadata, fd, index, block_size);
+    char *buffer = read_row(metadata, fd, index);
     METADATA *data = calloc(1, sizeof(METADATA));
 
     char *types = calloc(metadata->count, sizeof(char));
@@ -117,7 +116,7 @@ METADATA *get_row_as_data_struct(METADATA *metadata, int fd, int index, int bloc
     return data;
 }
 
-void write_row_as_data_struct(METADATA *metadata, METADATA *data, int fd, int index, int block_size)
+void write_row_as_data_struct(METADATA *metadata, METADATA *data, int fd, int index)
 {
     char *buffer = calloc(metadata->size, sizeof(char));
     int t = 0;
@@ -131,6 +130,6 @@ void write_row_as_data_struct(METADATA *metadata, METADATA *data, int fd, int in
         t += len;
     }
 
-    write_row(metadata, buffer, fd, index, block_size);
+    write_row(metadata, buffer, fd, index);
     free(buffer);
 }
