@@ -1,3 +1,6 @@
+#ifndef __CREATETABLE_H
+#define __CREATETABLE_H
+
 #include <gmodule.h>
 
 #include "linked_list.h"
@@ -15,6 +18,7 @@
 typedef struct
 {
     int count;
+    int block_count;
     int size;
     int data_offset;
     int primary_key;
@@ -50,3 +54,6 @@ void quit(int argc, char *argv[]);
 GHashTable *load_index(char *table, METADATA *metadata);
 void select_table(int argc, char *argv[]);
 void help(int argc, char *argv[]);
+void get_type_size(int *len, char type);
+
+#endif
