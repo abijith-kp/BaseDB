@@ -150,7 +150,7 @@ void delete_table(int argc, char *argv[])
     int index = 0;
     get_pos_len_type(metadata, attr, NULL, NULL, &type, &index);
 
-    int i=metadata->start;
+    int i = get_first_index(metadata);
     while (i != -1)
     {
         int _i = get_next_index(metadata, i);
@@ -186,8 +186,10 @@ void dump_table(int argc, char *argv[])
     print_header(metadata);
     
     int fd = open(table, O_RDONLY);
-    for (int i=metadata->start; i!=-1; i=(metadata->records[i])->prev)
+    for (int i=get_first_index(metadata); i!=-1; i=get_next_index(metadata, i))
+    {
         print_row(metadata, fd, i);
+    }
     close(fd);
 }
 
@@ -272,6 +274,7 @@ void insert_table(int argc, char *argv[])
     }
 
     write_data(table, data, metadata, index);
+    add_table_index(table, metadata);
     free(data);
 }
 
@@ -433,7 +436,7 @@ GHashTable *load_index(char *table, METADATA *metadata)
     GHashTable *index = g_hash_table_new(g_str_hash, g_str_equal);
     
     int fd = open(table, O_RDONLY);
-    int i=metadata->start;
+    int i = get_first_index(metadata);
     while (i != -1)
     {
         METADATA *data = get_row_as_data_struct(metadata, fd, i);
@@ -517,7 +520,7 @@ void select_table(int argc, char *argv[])
     get_pos_len_type(metadata, attr, NULL, NULL, &type, &index);
 
     print_header(metadata);
-    for (int i=metadata->start; i!=-1; i=(metadata->records[i])->prev)
+    for (int i=get_first_index(metadata); i!=-1; i=get_next_index(metadata, i))
     {
         METADATA *data = get_row_as_data_struct(metadata, fd, i);
 

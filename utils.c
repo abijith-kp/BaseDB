@@ -12,6 +12,9 @@
 int get_first_index(METADATA *metadata)
 {
     int index = metadata->start;
+    if (index < 0)
+        return index;
+
     for (int i=0; i<metadata->block_count-1; i++)
         index = metadata->records[index]->prev;
     return index;
