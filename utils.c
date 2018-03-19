@@ -60,7 +60,7 @@ void delete_index(METADATA *metadata, int index)
 
 char *read_row(METADATA *metadata, int fd, int index)
 {
-    int offset = metadata->data_offset + (index * metadata->size);
+    int offset = metadata->data_offset + (index * BLOCK_SIZE);
     lseek(fd, offset, SEEK_SET);
 
     char *buffer = calloc(metadata->size, sizeof(char));
@@ -70,7 +70,7 @@ char *read_row(METADATA *metadata, int fd, int index)
         read(fd, buffer+t, BLOCK_SIZE);
         t += BLOCK_SIZE;
         index = metadata->records[index]->next;
-        offset = metadata->data_offset + (index * metadata->size);
+        offset = metadata->data_offset + (index * BLOCK_SIZE);
         lseek(fd, offset, SEEK_SET);
     }
     
@@ -80,7 +80,7 @@ char *read_row(METADATA *metadata, int fd, int index)
 
 void write_row(METADATA *metadata, char *buffer, int fd, int index)
 {
-    int offset = metadata->data_offset + (index * metadata->size);
+    int offset = metadata->data_offset + (index * BLOCK_SIZE);
     lseek(fd, offset, SEEK_SET);
 
     int t = 0;
@@ -89,10 +89,10 @@ void write_row(METADATA *metadata, char *buffer, int fd, int index)
         write(fd, buffer+t, BLOCK_SIZE);
         t += BLOCK_SIZE;
         index = metadata->records[index]->next;
-        offset = metadata->data_offset + (index * metadata->size);
+        offset = metadata->data_offset + (index * BLOCK_SIZE);
         lseek(fd, offset, SEEK_SET);
     }
-    
+
     write(fd, buffer+t, (metadata->size - t));
 }
 
