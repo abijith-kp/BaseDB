@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "fes.h"
 #include "utils.h"
@@ -53,6 +54,17 @@ int check_input(char *t, char type, int len)
         }
         return 1;
     }
+    else if (type == 'f')
+    {
+        char *tmp;
+        float val = strtod(t, &tmp);
+        if (val == 0)
+        {
+            if (t == tmp)
+                return 0;
+        }
+        return 1;
+    }
 
     return 0;
 }
@@ -63,6 +75,15 @@ int operation(char *data, int operator, char *value, char type)
 
     if (type == 'i')
         s = atoi(data) - atoi(value);
+    else if (type == 'f')
+    {
+        if (strtod(data, NULL) > strtod(value, NULL))
+            s = 1;
+        else if (strtod(data, NULL) == strtod(value, NULL))
+            s = 0;
+        else
+            s = -1;
+    }
     else if (type == 's')
         s = strncmp(data, value, STRING);
 
@@ -86,6 +107,8 @@ void get_type_size(int *len, char type)
 {
     if (type == 'i')
         *len = INT;
+    else if (type == 'f')
+        *len = FLOAT;
     else if (type == 's')
         *len = STRING;
 }

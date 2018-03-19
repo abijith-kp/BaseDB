@@ -7,18 +7,18 @@
 extern GHashTable *table_index;
 
 char *commands[][100] = {
-                            {"create", "students", "sname", "s", "sid", "i", "gpa", "i", NULL},
+                            {"create", "students", "sname", "s", "sid", "i", "gpa", "f", NULL},
                             {"print", "students", NULL},
                             {"buildindex", "students", "sname", NULL},
                             {"insert", "students", "sname", "abc", "sid", "fff", "gpa", "10", NULL},
                             {"insert", "students", "sname", "abc", "sid", "1", "gpa", "10", NULL},
-                            {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11", NULL},
+                            {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11.345", NULL},
                             {"insert", "students", "sname", "apqr", "sid", "2", "gpa", "12", NULL},
                             {"insert", "students", "sname", "pqr", "sid", "2", "gpa", "13", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "3", "gpa", "13", NULL},
                             {"insert", "students", "sname", "ptq", "sid", "3", "gpa", "14", NULL},
                             {"insert", "students", "sname", "ptq", "sid", "4", "gpa", "15", NULL},
-                            {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
+                            {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14.213", NULL},
                             {"print", "students", NULL},
                             {"insert", "students", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", NULL},
@@ -34,8 +34,9 @@ char *commands[][100] = {
                             {"delete", "students", "sname", "xyz", NULL},
                             {"print", "students", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
-                            {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11", NULL},
-                            {"insert", "students", "sname", "qtc", "sid", "2", "gpa", "11", NULL},
+                            {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11.1", NULL},
+                            {"insert", "students", "sname", "qtc", "sid", "2", "gpa", "11.9", NULL},
+                            {"select", "students", "gpa", "<=", "11.5", NULL},
 
                             {"create", "employee", "empid", "i", "empname", "s", "count", "i", NULL},
                             {"insert", "employee", "empid", "2", "empname", "a", "count", "11", NULL},

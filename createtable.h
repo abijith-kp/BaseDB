@@ -12,6 +12,7 @@
 #define BLOCK_SIZE 1024
 
 #define INT 10
+#define FLOAT 20
 #define STRING 50
 
 
