@@ -99,7 +99,8 @@ void get_pos_len_type(METADATA *metadata, char *attr, int *pos, int *len, char *
                 *index = j;
             break;
         }
-        *pos += l;
+        if (pos)
+            *pos += l;
     }
 }
 
