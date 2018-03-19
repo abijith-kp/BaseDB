@@ -10,6 +10,7 @@ char *commands[][100] = {
                             {"create", "students", "sname", "s", "sid", "i", "gpa", "i", NULL},
                             {"print", "students", NULL},
                             {"buildindex", "students", "sname", NULL},
+                            {"insert", "students", "sname", "abc", "sid", "fff", "gpa", "10", NULL},
                             {"insert", "students", "sname", "abc", "sid", "1", "gpa", "10", NULL},
                             {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11", NULL},
                             {"insert", "students", "sname", "apqr", "sid", "2", "gpa", "12", NULL},

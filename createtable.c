@@ -30,6 +30,26 @@ void *get_table_index(char *table)
     return g_hash_table_lookup(table_index, table);
 }
 
+
+int check_input(char *t, char type, int len)
+{
+    if (type == 's')
+        return 1;
+    else if (type == 'i')
+    {
+        for (int i=0; i<len; i++)
+        {
+            if (t[i] == 0)
+                break;
+            if (!isdigit(t[i]))
+                return 0;
+        }
+        return 1;
+    }
+
+    return 0;
+}
+
 int operation(char *data, int operator, char *value, char type)
 {
     int s = 0;
@@ -286,6 +306,12 @@ void insert_table(int argc, char *argv[])
             strncpy(t, argv[i+1], len);
             data->types[j] = metadata->types[j];
             data->options[j] = t;
+            if (!check_input(data->options[j], data->types[j], len))
+            {
+                printf("Colomn value is incorrect. Record not inserted.\n");
+                free(data);
+                return;
+            }
         }
     }
 
