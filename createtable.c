@@ -330,32 +330,52 @@ void write_metadata(METADATA *metadata, char *table)
 {
     int fd = open(table, O_CREAT|O_WRONLY, S_IRWXU);
     int data_offset = 0;
+    int pos = 0;
 
-    write(fd, &(data_offset), sizeof(data_offset));
-    write(fd, &(metadata->count), sizeof(metadata->count));
+    /* For project */
+
+    write(fd, &(metadata->header), sizeof(metadata->header));
+    write(fd, &(metadata->time_stamp), sizeof(metadata->time_stamp));
+    write(fd, &(metadata->table_name), sizeof(metadata->table_name));
+    write(fd, &(metadata->active_records), sizeof(metadata->active_records));
+    write(fd, &(metadata->data_end), sizeof(metadata->data_end));
+    write(fd, &(metadata->first_record), sizeof(metadata->first_record));
+    write(fd, &(metadata->last_record), sizeof(metadata->last_record));
+    write(fd, &(metadata->total_record), sizeof(metadata->total_record));
+
+    /***************/
+
+    pos = lseek(fd, 0, SEEK_CUR);
+    write(fd, &(data_offset), sizeof(data_offset)); /* data start */
+    write(fd, &(metadata->count), sizeof(metadata->count)); /* colomn count */
     write(fd, &(metadata->size), sizeof(metadata->size));
 
+    /*
     write(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     write(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     write(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
+    */
 
-    for (int i=0; i<metadata->count; i++)
-    {
-        write(fd, metadata->options[i], TBL_NAME_SIZE);
-        write(fd, &(metadata->types[i]), TBL_TYPE_SIZE);
-    }
-
-    save_list(metadata->records, metadata->next, metadata->prev,
-              MAX_RECORDS);
     write(fd, &(metadata->free), sizeof(metadata->free));
     write(fd, &(metadata->head), sizeof(metadata->head));
     write(fd, &(metadata->start), sizeof(metadata->start));
     write(fd, &(metadata->next), sizeof(metadata->next));
     write(fd, &(metadata->prev), sizeof(metadata->prev));
 
+    read(fd, metadata->column_list, sizeof(Column)*metadata->count);
+
+    for (int i=0; i<metadata->count; i++)
+    {
+        strncpy(metadata->options[i], metadata->column_list[i].col_name, COLUMN_NAME_SIZE);
+        metadata->types[i] = metadata->column_list[i].data_type;
+    }
+
+    save_list(metadata->records, metadata->next, metadata->prev,
+              MAX_RECORDS);
+
     data_offset = lseek(fd, 0, SEEK_CUR);
     data_offset += 10;
-    lseek(fd, 0, SEEK_SET);
+    lseek(fd, pos, SEEK_SET);
     write(fd, &(data_offset), sizeof(data_offset));
     metadata->data_offset = data_offset;
     close(fd);
@@ -372,27 +392,45 @@ METADATA *read_metadata(char *table)
 
     int fd = open(table, O_RDONLY);
 
+    /* For project */
+
+    read(fd, &(metadata->header), sizeof(metadata->header));
+    read(fd, &(metadata->time_stamp), sizeof(metadata->time_stamp));
+    read(fd, &(metadata->table_name), sizeof(metadata->table_name));
+    read(fd, &(metadata->active_records), sizeof(metadata->active_records));
+    read(fd, &(metadata->data_end), sizeof(metadata->data_end));
+    read(fd, &(metadata->first_record), sizeof(metadata->first_record));
+    read(fd, &(metadata->last_record), sizeof(metadata->last_record));
+    read(fd, &(metadata->total_record), sizeof(metadata->total_record));
+
+    /***************/
+
     read(fd, &(metadata->data_offset), sizeof(metadata->data_offset));
     read(fd, &(metadata->count), sizeof(metadata->count));
-    read(fd, &(metadata->size), sizeof(metadata->size));
+    read(fd, &(metadata->size), sizeof(metadata->size)); /* size of record */
+
+    /*
     read(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     read(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     read(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
-
-    char *types = calloc(metadata->count, sizeof(char));
-    for (int i=0; i<metadata->count; i++)
-    {
-        char *t = calloc(TBL_NAME_SIZE, sizeof(char));
-        read(fd, t, TBL_NAME_SIZE);
-        read(fd, &(types[i]), TBL_TYPE_SIZE);
-        metadata->options[i] = t;
-    }
+    */
 
     read(fd, &(metadata->free), sizeof(metadata->free));
     read(fd, &(metadata->head), sizeof(metadata->head));
     read(fd, &(metadata->start), sizeof(metadata->start));
     read(fd, &(metadata->next), sizeof(metadata->next));
     read(fd, &(metadata->prev), sizeof(metadata->prev));
+
+    read(fd, metadata->column_list, sizeof(Column)*metadata->count);
+
+    char *types = calloc(metadata->count, sizeof(char));
+    for (int i=0; i<metadata->count; i++)
+    {
+        char *t = calloc(COLUMN_NAME_SIZE, sizeof(char));
+        strncpy(t, metadata->column_list[i].col_name, COLUMN_NAME_SIZE);
+        types[i] = metadata->column_list[i].data_type;
+        metadata->options[i] = t;
+    }
 
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 0);
@@ -401,11 +439,14 @@ METADATA *read_metadata(char *table)
     metadata->block_count = get_block_count(metadata->size);
     close(fd);
 
+    /*
     if (metadata->is_indexed)
         metadata->index = load_index(table, metadata);
+    */
     add_table_index(table, metadata);
     return metadata;
 }
+
 
 int createtable(int argc, char *argv[])
 {
@@ -427,6 +468,8 @@ int createtable(int argc, char *argv[])
     metadata->free = 0;
     metadata->head = -1;
     metadata->start = -1;
+    metadata->first_record = -1;
+    metadata->last_record = -1;
 
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 1);
@@ -436,12 +479,18 @@ int createtable(int argc, char *argv[])
 
     for (int i=2; i<argc; i+=2)
     {
-        char *t = calloc(TBL_NAME_SIZE, sizeof(char));
-        strncpy(t, argv[i], TBL_NAME_SIZE);
-        metadata->options[(i-2)/2] = t;
-        types[(i-2)/2] = argv[i+1][0];
+        int j = (i - 2) / 2;
+        char *t = calloc(COLUMN_NAME_SIZE, sizeof(char));
+        strncpy(t, argv[i], COLUMN_NAME_SIZE);
+        metadata->options[j] = t;
+        strncpy(metadata->column_list[j].col_name, t, COLUMN_NAME_SIZE);
+
+        types[j] = argv[i+1][0];
+        metadata->column_list[j].data_type = types[j];
+        
         get_type_size(&s, argv[i+1][0]);
         metadata->size += s;
+        metadata->column_list[j].
     }
 
     metadata->types = types;

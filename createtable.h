@@ -8,6 +8,7 @@
 #define TBL_NAME_SIZE 50
 #define TBL_TYPE_SIZE sizeof(char)
 #define MAX_RECORDS 1024
+#define COLUMN_NAME_SIZE 32
 
 #define BLOCK_SIZE 1024
 
@@ -15,9 +16,39 @@
 #define FLOAT 20
 #define STRING 50
 
+/* For project */
+
+#define FILE_HEADER "CS"
 
 typedef struct
 {
+    char col_name[COLUMN_NAME_SIZE];
+    char data_type; // this contains both type (1st 3bits) and constraint(2nd 3bits)
+    char index; // present or not ( may be extended as column ordering)
+    char size; // length of the data
+    char frac_part_size; // nonzero if the data type is real, zero otherwise
+} Column;
+
+/**************/
+
+
+typedef struct
+{
+    /* For project */
+
+    char header[2];
+    char time_stamp[8];
+    char table_name[32];
+    int active_records;
+    int num_cols;
+    int data_end;
+    long int first_record;
+    long int last_record;
+    long int total_record;
+    Column column_list[255];
+
+    /**************/
+
     int count;
     int block_count;
     int size;
