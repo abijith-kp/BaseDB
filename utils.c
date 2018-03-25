@@ -61,6 +61,8 @@ void delete_index(METADATA *metadata, int index)
 char *read_row(METADATA *metadata, int fd, int index)
 {
     int offset = metadata->data_offset + (index * BLOCK_SIZE);
+    offset += (2 * sizeof(int));
+
     lseek(fd, offset, SEEK_SET);
 
     char *buffer = calloc(metadata->size, sizeof(char));
@@ -81,6 +83,8 @@ char *read_row(METADATA *metadata, int fd, int index)
 void write_row(METADATA *metadata, char *buffer, int fd, int index)
 {
     int offset = metadata->data_offset + (index * BLOCK_SIZE);
+    offset += (2 * sizeof(int));
+
     lseek(fd, offset, SEEK_SET);
 
     int t = 0;

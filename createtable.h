@@ -42,9 +42,9 @@ typedef struct
     int active_records;
     int num_cols;
     int data_end;
-    long int first_record;
-    long int last_record;
-    long int total_record;
+    int first_record;
+    int last_record;
+    int total_record;
     Column column_list[255];
 
     /**************/

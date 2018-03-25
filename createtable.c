@@ -203,8 +203,10 @@ void delete_table(int argc, char *argv[])
         {
             delete_index(metadata, i);
 
+            /*
             if (metadata->is_indexed)
                 g_hash_table_remove(metadata->index, data->options[metadata->primary_key]);
+            */
         }
         free(data);
         i = _i;
@@ -250,12 +252,17 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 
     write_row_as_data_struct(metadata, data, fd, pos);
 
+    /*
     if (metadata->is_indexed)
         g_hash_table_insert(metadata->index,
                             data->options[metadata->primary_key],
                             GINT_TO_POINTER(pos));
+    */
 
     close(fd);
+
+    if (pos > metadata->data_end)
+        metadata->data_end = pos;
     write_metadata(metadata, table);
 }
 
@@ -280,6 +287,7 @@ void insert_table(int argc, char *argv[])
 
     for (int i=2; i<argc; i+=2)
     {
+        // metadata->column_list[i]->size;
         char *t = calloc(TBL_NAME_SIZE, sizeof(char));
         for (int j=0; j<metadata->count; j++)
         {
@@ -300,15 +308,18 @@ void insert_table(int argc, char *argv[])
         }
     }
 
+    /*
     if ((metadata->is_indexed) && (NULL == data->options[metadata->primary_key]))
     {
         printf("Primary key colomn cannot be null.\n");
         free(data);
         return;
     }
+    */
 
     int index = -1;
     
+    /*
     if (metadata->is_indexed)
     {
         char *key = data->options[metadata->primary_key];
@@ -320,6 +331,7 @@ void insert_table(int argc, char *argv[])
             index = GPOINTER_TO_INT(val);
         }
     }
+    */
 
     write_data(table, data, metadata, index);
     add_table_index(table, metadata);
@@ -359,19 +371,21 @@ void write_metadata(METADATA *metadata, char *table)
     write(fd, &(metadata->free), sizeof(metadata->free));
     write(fd, &(metadata->head), sizeof(metadata->head));
     write(fd, &(metadata->start), sizeof(metadata->start));
+    /*
+    save_list(metadata->records, metadata->next, metadata->prev,
+              MAX_RECORDS);
+    */
+    save_list_v2(metadata->head, metadata->records, metadata->data_offset, fd, metadata->next, metadata->prev, MAX_RECORDS);
     write(fd, &(metadata->next), sizeof(metadata->next));
     write(fd, &(metadata->prev), sizeof(metadata->prev));
 
-    read(fd, metadata->column_list, sizeof(Column)*metadata->count);
+    write(fd, metadata->column_list, sizeof(Column)*metadata->count);
 
     for (int i=0; i<metadata->count; i++)
     {
         strncpy(metadata->options[i], metadata->column_list[i].col_name, COLUMN_NAME_SIZE);
         metadata->types[i] = metadata->column_list[i].data_type;
     }
-
-    save_list(metadata->records, metadata->next, metadata->prev,
-              MAX_RECORDS);
 
     data_offset = lseek(fd, 0, SEEK_CUR);
     data_offset += 10;
@@ -432,9 +446,11 @@ METADATA *read_metadata(char *table)
         metadata->options[i] = t;
     }
 
+    /*
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 0);
-
+    */
+    metadata->records = init_list_v2(fd, metadata->data_offset, metadata->data_end, metadata->next, metadata->prev, MAX_RECORDS, 0);
     metadata->types = types;
     metadata->block_count = get_block_count(metadata->size);
     close(fd);
@@ -470,9 +486,13 @@ int createtable(int argc, char *argv[])
     metadata->start = -1;
     metadata->first_record = -1;
     metadata->last_record = -1;
+    metadata->data_end = -1;
 
+    /*
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 1);
+    */
+    metadata->records = init_list_v2(-1, metadata->data_offset, metadata->data_end, metadata->next, metadata->prev, MAX_RECORDS, 1);
 
     char *types = calloc(metadata->count, sizeof(char));
     int s = 0;
@@ -490,7 +510,6 @@ int createtable(int argc, char *argv[])
         
         get_type_size(&s, argv[i+1][0]);
         metadata->size += s;
-        metadata->column_list[j].
     }
 
     metadata->types = types;
@@ -555,6 +574,8 @@ GHashTable *load_index(char *table, METADATA *metadata)
 
 void build_index(int argc, char *argv[])
 {
+    return;
+
     char *table = argv[1];
     char *attr = argv[2];
 
@@ -577,6 +598,8 @@ void build_index(int argc, char *argv[])
 
 void drop_index(int argc, char *argv[])
 {
+    return;
+
     char *table = argv[1];
 
     if (!is_created(table))

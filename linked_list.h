@@ -1,8 +1,9 @@
 #ifndef __LINKED_LIST_H
+#define __LINKED_LIST_H
 
 typedef struct
 {
-    int next, prev, start;
+    int next, prev;
 } LIST;
 
 int insert(LIST **ll, int *free, int *head, int *start);
@@ -11,5 +12,7 @@ void print_list(LIST **ll, int free, int head, int start);
 LIST **init_list(int *next, int *prev, int count, int init);
 void save_list(LIST **ll, int *next, int *prev, int count);
 void uninit_list(LIST **ll, int count);
+LIST **init_list_v2(int fd, int data_offset, int data_end, int *next, int *prev, int count, int init);
+void save_list_v2(int head, LIST **ll, int data_offset, int fd, int *next, int *prev, int count);
 
 #endif
