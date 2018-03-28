@@ -11,51 +11,25 @@
 
 int get_first_index(METADATA *metadata)
 {
-    int index = metadata->start;
-    if (index < 0)
-        return index;
-
-    for (int i=0; i<metadata->block_count-1; i++)
-        index = metadata->records[index]->prev;
-    return index;
+    return metadata->first_record;
 }
 
 int get_next_index(METADATA *metadata, int cur_index)
 {
-    int next_index = cur_index;
-    for (int i=0; i<metadata->block_count; i++)
-    {
-        if (next_index == -1)
-            break;
-        next_index = metadata->records[next_index]->prev;
-    }
-
-    return next_index;
+    return metadata->records[cur_index]->next;
 }
 
 int get_new_index(METADATA *metadata)
 {
-    int next_index = metadata->head;
-    for (int i=0; i<metadata->block_count; i++)
-    {
-        next_index = insert(metadata->records, &(metadata->free),
-                            &(metadata->head), &(metadata->start));
-        if (next_index == -1)
-            break;
-    }
-
-    return next_index;
+    return insert(metadata->records, &(metadata->first_record),
+                  &(metadata->last_record), &(metadata->data_end));
 }
 
 void delete_index(METADATA *metadata, int index)
 {
-    for (int i=0; i<metadata->block_count; i++)
-    {
-        int next_index = metadata->records[index]->next;
-        delete_with_index(index, metadata->records, &(metadata->free),
-                          &(metadata->head), &(metadata->start));
-        index = next_index;
-    }
+    delete_with_index(index, metadata->records,
+                &(metadata->first_record), &(metadata->last_record),
+                &(metadata->data_end));
 }
 
 char *read_row(METADATA *metadata, int fd, int index)

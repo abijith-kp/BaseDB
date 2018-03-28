@@ -3,7 +3,7 @@
 
 #include <gmodule.h>
 
-#include "linked_list.h"
+#include "linked_list_new.h"
 
 #define TBL_NAME_SIZE 50
 #define TBL_TYPE_SIZE sizeof(char)

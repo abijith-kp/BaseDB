@@ -87,6 +87,7 @@ int operation(char *data, int operator, char *value, char type)
     else if (type == 's')
         s = strncmp(data, value, STRING);
 
+    printf("operator: %s %d %s %d %d\n", data, s, value, STRING, strncmp(data, value, STRING));
     if (EQOP == operator)
         return s == 0;
     else if (GEOP == operator)
@@ -119,6 +120,7 @@ void get_pos_len_type(METADATA *metadata, char *attr, int *pos, int *len, char *
     {
         int l = 0;
         get_type_size(&l, metadata->types[j]);
+        printf("<<<<<<>>>>> %s %s\n", metadata->options[j], attr);
         if (0 == strcmp(metadata->options[j], attr))
         {
             if (len)
@@ -192,13 +194,16 @@ void delete_table(int argc, char *argv[])
     int index = 0;
     get_pos_len_type(metadata, attr, NULL, NULL, &type, &index);
 
-    int i = get_first_index(metadata);
-    while (i != -1)
+    // int i = get_first_index(metadata);
+    int i = metadata->first_record;
+    while (i != metadata->last_record)
     {
         int _i = get_next_index(metadata, i);
+        printf("[%d %d]\n", i, _i);
 
         METADATA *data = get_row_as_data_struct(metadata, fd, i);
 
+        printf("%s %d %s %c %d\n", data->options[index], operator, value, type, operation(data->options[index], operator, value, type));
         if (operation(data->options[index], operator, value, type))
         {
             delete_index(metadata, i);
@@ -210,6 +215,24 @@ void delete_table(int argc, char *argv[])
         }
         free(data);
         i = _i;
+    }
+
+    METADATA *data;
+    if (i == metadata->last_record)
+    {
+        data = get_row_as_data_struct(metadata, fd, i);
+        printf("%s %d %s %c %d\n", data->options[index], operator, value, type, operation(data->options[index], operator, value, type));
+
+        if (operation(data->options[index], operator, value, type))
+        {
+            delete_index(metadata, i);
+
+            /*
+            if (metadata->is_indexed)
+                g_hash_table_remove(metadata->index, data->options[metadata->primary_key]);
+            */
+        }
+        free(data);
     }
 
     close(fd);
@@ -230,10 +253,22 @@ void dump_table(int argc, char *argv[])
     print_header(metadata);
     
     int fd = open(table, O_RDONLY);
-    for (int i=get_first_index(metadata); i!=-1; i=get_next_index(metadata, i))
+    int i = 0;
+
+    if (get_first_index(metadata) == 0)
+        return;
+
+    printf("%d |||| %d\n", metadata->first_record, metadata->last_record);
+
+    for (i=get_first_index(metadata); i!=metadata->last_record; i=get_next_index(metadata, i))
     {
+        printf("???? %d %d\n", i, get_next_index(metadata, i));
         print_row(metadata, fd, i);
     }
+    
+    if (i == metadata->last_record)
+        print_row(metadata, fd, i);
+
     close(fd);
 }
 
@@ -375,7 +410,7 @@ void write_metadata(METADATA *metadata, char *table)
     save_list(metadata->records, metadata->next, metadata->prev,
               MAX_RECORDS);
     */
-    save_list_v2(metadata->head, metadata->records, metadata->data_offset, fd, metadata->next, metadata->prev, MAX_RECORDS);
+    save_list_v2(metadata->records, metadata->data_offset, fd, metadata->first_record, metadata->last_record, metadata->data_end);
     write(fd, &(metadata->next), sizeof(metadata->next));
     write(fd, &(metadata->prev), sizeof(metadata->prev));
 
@@ -445,13 +480,16 @@ METADATA *read_metadata(char *table)
         types[i] = metadata->column_list[i].data_type;
         metadata->options[i] = t;
     }
+    metadata->types = types;
+
+    for (int i=0; i<metadata->count; i++)
+        printf(">>> %s %c %s %c\n", metadata->column_list[i].col_name, metadata->column_list[i].data_type, metadata->options[i], metadata->types[i]);
 
     /*
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 0);
     */
-    metadata->records = init_list_v2(fd, metadata->data_offset, metadata->data_end, metadata->next, metadata->prev, MAX_RECORDS, 0);
-    metadata->types = types;
+    metadata->records = init_list_v2(fd, metadata->data_offset, metadata->data_end);
     metadata->block_count = get_block_count(metadata->size);
     close(fd);
 
@@ -484,15 +522,16 @@ int createtable(int argc, char *argv[])
     metadata->free = 0;
     metadata->head = -1;
     metadata->start = -1;
-    metadata->first_record = -1;
-    metadata->last_record = -1;
-    metadata->data_end = -1;
+
+    metadata->first_record = 0;
+    metadata->last_record = 1;
+    metadata->data_end = 0;
 
     /*
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 1);
     */
-    metadata->records = init_list_v2(-1, metadata->data_offset, metadata->data_end, metadata->next, metadata->prev, MAX_RECORDS, 1);
+    metadata->records = init_list_v2(-1, metadata->data_offset, metadata->data_end);
 
     char *types = calloc(metadata->count, sizeof(char));
     int s = 0;
@@ -536,7 +575,7 @@ void save_metadata(void *key, void *value, void *user_data)
 {
     printf("Closing all the caches for %s...\n", key);
     METADATA *t = value;
-    uninit_list(t->records, MAX_RECORDS);
+    //uninit_list(t->records, MAX_RECORDS);
 }
 
 void quit(int argc, char *argv[])
