@@ -203,10 +203,8 @@ void delete_table(int argc, char *argv[])
         {
             delete_index(metadata, i);
 
-            /*
             if (metadata->is_indexed)
                 g_hash_table_remove(metadata->index, data->options[metadata->primary_key]);
-            */
         }
         free(data);
         i = _i;
@@ -256,19 +254,12 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 
     write_row_as_data_struct(metadata, data, fd, pos);
 
-    /*
     if (metadata->is_indexed)
         g_hash_table_insert(metadata->index,
                             data->options[metadata->primary_key],
                             GINT_TO_POINTER(pos));
-    */
-
     close(fd);
 
-    /*
-    if (pos > metadata->data_end)
-        metadata->data_end = pos;
-    */
     write_metadata(metadata, table);
 }
 
@@ -314,18 +305,15 @@ void insert_table(int argc, char *argv[])
         }
     }
 
-    /*
     if ((metadata->is_indexed) && (NULL == data->options[metadata->primary_key]))
     {
         printf("Primary key colomn cannot be null.\n");
         free(data);
         return;
     }
-    */
 
     int index = -1;
     
-    /*
     if (metadata->is_indexed)
     {
         char *key = data->options[metadata->primary_key];
@@ -337,7 +325,6 @@ void insert_table(int argc, char *argv[])
             index = GPOINTER_TO_INT(val);
         }
     }
-    */
 
     write_data(table, data, metadata, index);
     add_table_index(table, metadata);
@@ -352,11 +339,11 @@ void write_metadata(METADATA *metadata, char *table)
 
     /* For project */
 
+    save_list_v2(metadata->records, metadata->data_offset, fd, &(metadata->first_record), &(metadata->last_record), metadata->start, metadata->head, metadata->free, metadata->data_end);
+
     write(fd, &(metadata->header), sizeof(metadata->header));
     write(fd, &(metadata->time_stamp), sizeof(metadata->time_stamp));
     write(fd, &(metadata->table_name), sizeof(metadata->table_name));
-    write(fd, &(metadata->active_records), sizeof(metadata->active_records));
-    save_list_v2(metadata->records, metadata->data_offset, fd, &(metadata->first_record), &(metadata->last_record), metadata->start, metadata->head, metadata->free, metadata->data_end);
     write(fd, &(metadata->data_end), sizeof(metadata->data_end));
     write(fd, &(metadata->first_record), sizeof(metadata->first_record));
     write(fd, &(metadata->last_record), sizeof(metadata->last_record));
@@ -369,22 +356,9 @@ void write_metadata(METADATA *metadata, char *table)
     write(fd, &(metadata->count), sizeof(metadata->count)); /* colomn count */
     write(fd, &(metadata->size), sizeof(metadata->size));
 
-    /*
     write(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     write(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     write(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
-    */
-
-    write(fd, &(metadata->free), sizeof(metadata->free));
-    write(fd, &(metadata->head), sizeof(metadata->head));
-    write(fd, &(metadata->start), sizeof(metadata->start));
-    /*
-    save_list(metadata->records, metadata->next, metadata->prev,
-              MAX_RECORDS);
-    save_list_v2(metadata->records, metadata->data_offset, fd, &(metadata->first_record), &(metadata->last_record), metadata->start, metadata->head, metadata->free, metadata->data_end);
-    */
-    write(fd, &(metadata->next), sizeof(metadata->next));
-    write(fd, &(metadata->prev), sizeof(metadata->prev));
 
     write(fd, metadata->column_list, sizeof(Column)*metadata->count);
 
@@ -395,7 +369,7 @@ void write_metadata(METADATA *metadata, char *table)
     }
 
     data_offset = lseek(fd, 0, SEEK_CUR);
-    data_offset += 10;
+    data_offset += EXTRA_BUFFER;
     lseek(fd, pos, SEEK_SET);
     write(fd, &(data_offset), sizeof(data_offset));
     metadata->data_offset = data_offset;
@@ -418,7 +392,6 @@ METADATA *read_metadata(char *table)
     read(fd, &(metadata->header), sizeof(metadata->header));
     read(fd, &(metadata->time_stamp), sizeof(metadata->time_stamp));
     read(fd, &(metadata->table_name), sizeof(metadata->table_name));
-    read(fd, &(metadata->active_records), sizeof(metadata->active_records));
     read(fd, &(metadata->data_end), sizeof(metadata->data_end));
     read(fd, &(metadata->first_record), sizeof(metadata->first_record));
     read(fd, &(metadata->last_record), sizeof(metadata->last_record));
@@ -430,17 +403,9 @@ METADATA *read_metadata(char *table)
     read(fd, &(metadata->count), sizeof(metadata->count));
     read(fd, &(metadata->size), sizeof(metadata->size)); /* size of record */
 
-    /*
     read(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     read(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     read(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
-    */
-
-    read(fd, &(metadata->free), sizeof(metadata->free));
-    read(fd, &(metadata->head), sizeof(metadata->head));
-    read(fd, &(metadata->start), sizeof(metadata->start));
-    read(fd, &(metadata->next), sizeof(metadata->next));
-    read(fd, &(metadata->prev), sizeof(metadata->prev));
 
     read(fd, metadata->column_list, sizeof(Column)*metadata->count);
 
@@ -454,19 +419,13 @@ METADATA *read_metadata(char *table)
     }
     metadata->types = types;
 
-    /*
-    metadata->records = init_list(metadata->next, metadata->prev,
-                                     MAX_RECORDS, 0);
-    */
     metadata->records = init_list_v2(fd, metadata->data_offset, &(metadata->data_end), &(metadata->free), &(metadata->head), &(metadata->start),
                             &(metadata->first_record), &(metadata->last_record));
     metadata->block_count = get_block_count(metadata->size);
     close(fd);
 
-    /*
     if (metadata->is_indexed)
         metadata->index = load_index(table, metadata);
-    */
     add_table_index(table, metadata);
     return metadata;
 }
@@ -497,10 +456,6 @@ int createtable(int argc, char *argv[])
     metadata->last_record = 0;
     metadata->data_end = 0;
 
-    /*
-    metadata->records = init_list(metadata->next, metadata->prev,
-                                     MAX_RECORDS, 1);
-    */
     metadata->records = init_list_v2(-1, metadata->data_offset, &(metadata->data_end), &(metadata->free), &(metadata->head), &(metadata->start),
                             &(metadata->first_record), &(metadata->last_record));
 
@@ -560,10 +515,13 @@ void quit(int argc, char *argv[])
 GHashTable *load_index(char *table, METADATA *metadata)
 {
     GHashTable *index = g_hash_table_new(g_str_hash, g_str_equal);
+
+    if (metadata->head == 0)
+        return index;
     
     int fd = open(table, O_RDONLY);
     int i = get_first_index(metadata);
-    while (i != -1)
+    while (i != 0)
     {
         METADATA *data = get_row_as_data_struct(metadata, fd, i);
 
@@ -584,8 +542,6 @@ GHashTable *load_index(char *table, METADATA *metadata)
 
 void build_index(int argc, char *argv[])
 {
-    return;
-
     char *table = argv[1];
     char *attr = argv[2];
 
@@ -608,8 +564,6 @@ void build_index(int argc, char *argv[])
 
 void drop_index(int argc, char *argv[])
 {
-    return;
-
     char *table = argv[1];
 
     if (!is_created(table))

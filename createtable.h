@@ -9,6 +9,7 @@
 #define TBL_TYPE_SIZE sizeof(char)
 #define MAX_RECORDS 1024
 #define COLUMN_NAME_SIZE 32
+#define EXTRA_BUFFER 10
 
 #define BLOCK_SIZE 1024
 
@@ -39,7 +40,6 @@ typedef struct
     char header[2];
     char time_stamp[8];
     char table_name[32];
-    int active_records;
     int num_cols;
     int data_end;
     int first_record;
@@ -55,8 +55,6 @@ typedef struct
     int data_offset;
     int primary_key;
     int key_offset;
-    int next[MAX_RECORDS];
-    int prev[MAX_RECORDS];
     int free;
     int head;
     int start;

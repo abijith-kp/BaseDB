@@ -21,7 +21,6 @@ int insert(LIST ***l, int *start, int *head, int *free, int *data_end)
 
         *start = 1;
         *head = 1;
-        // printf(">> %d %d %p\n", *head, *data_end, ll[1]);
         ll[*start]->next = 0;
         ll[*start]->prev = 0;
     }
@@ -31,7 +30,6 @@ int insert(LIST ***l, int *start, int *head, int *free, int *data_end)
         ll = realloc(ll, (*data_end + 1) * sizeof(LIST *));
         ll[*data_end] = calloc(1, sizeof(LIST));
 
-        // printf("<< %d %d %p\n", *head, *data_end, ll[1]);
         ll[*data_end]->next = 0;
         ll[*data_end]->prev = *head;
         ll[*head]->next = *data_end;
@@ -165,7 +163,6 @@ LIST **init_list_v2(int fd, int data_offset, int *data_end,
         return NULL;
     }
 
-    // printf("???????? %d\n", *data_end);
     LIST **ll = calloc((*data_end+1), sizeof(LIST *));
     for (int i=1; i<=*data_end; i++)
     {
@@ -177,7 +174,6 @@ LIST **init_list_v2(int fd, int data_offset, int *data_end,
 
     *start = *first_record;
     *head = *last_record;
-    printf("fr: %d || lr: %d\n", *first_record, *last_record);
     if (*head != 0)
     {
         *free = ll[*head]->next;
@@ -194,7 +190,7 @@ void uninit_list(LIST **ll, int count)
     free(ll);
 }
 
-/*
+/* XXX To test the linked list impl uncomment this main()
 int main(int argc, char *argv[])
 {
     int fd = open("test.table", O_CREAT|O_RDWR, S_IRWXU);
