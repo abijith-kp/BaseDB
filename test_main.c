@@ -67,7 +67,7 @@ int length(char *argv[])
 
 int main ()
 {
-    printf("Welcome to MINIREL database system\n\n");
+    printf("Welcome to BaseDB\n\n");
     table_index = NULL;
 
     int i=0;
@@ -124,7 +124,7 @@ int main ()
         printf("------------\n");
     }
 
-    printf("\n\nGoodbye from MINIREL\n");
+    printf("\n\nGoodbye from BaseDB\n");
 
     return 0;
 }
