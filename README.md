@@ -63,6 +63,8 @@ Some notes on current status and futures ideas
 Acknowledgment
 ===============
 
+This project wa inspired from MINIREL. The frontend of MINIREL was taken into this project. 
+
 MINIREL was originally conceived as an instructional RDBMS design student project by Professor David DeWitt of the University of Wisconsin.
 
 I have downloaded the minirel code from the web page of [Associate Prof. Murali Krishnan K](http://athena.nitc.ac.in/~kmurali/dbms/minirel.html)
