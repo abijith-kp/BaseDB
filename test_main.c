@@ -9,7 +9,9 @@ extern GHashTable *table_index;
 char *commands[][100] = {
                             {"create", "students", "sname", "s", "sid", "i", "gpa", "f", NULL},
                             {"print", "students", NULL},
+                            #ifdef INDEXED
                             {"buildindex", "students", "sname", NULL},
+                            #endif
                             {"insert", "students", "sname", "abc", "sid", "fff", "gpa", "10", NULL},
                             {"insert", "students", "sname", "abc", "sid", "1", "gpa", "10", NULL},
                             {"insert", "students", "sname", "abc", "sid", "2", "gpa", "11.345", NULL},
@@ -23,13 +25,17 @@ char *commands[][100] = {
                             {"insert", "students", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", NULL},
                             {"print", "students", NULL},
+                            #ifdef INDEXED
                             {"dropindex", "students", "sname", NULL},
+                            #endif
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "6", "gpa", "15", NULL},
                             {"print", "students", NULL},
                             {"select", "students", "sname", "=", "xyz", NULL},
+                            #ifdef INDEXED
                             {"buildindex", "students", "sname", NULL},
+                            #endif
                             {"select", "students", "gpa", "=", "14", NULL},
                             {"delete", "students", "sname", "xyz", NULL},
                             {"print", "students", NULL},
@@ -82,10 +88,12 @@ int main ()
             dump_table(length(commands[i]), commands[i]);
         else if (strcmp(commands[i][0], "insert") == 0)
             insert_table(length(commands[i]), commands[i]);
+        #ifdef INDEXED
         else if (strcmp(commands[i][0], "buildindex") == 0)
             build_index(length(commands[i]), commands[i]);
         else if (strcmp(commands[i][0], "dropindex") == 0)
             drop_index(length(commands[i]), commands[i]);
+        #endif
         else if (strcmp(commands[i][0], "quit") == 0)
             quit(length(commands[i]), commands[i]);
         else if (strcmp(commands[i][0], "delete") == 0)

@@ -1,4 +1,4 @@
-OPTIONS=`pkg-config --cflags --libs glib-2.0` -g
+OPTIONS=`pkg-config --cflags --libs glib-2.0` -g -DINDEXED
 OBJS=linked_list_new.o createtable.o main.o fes.o test_main.o utils.o
 EXECS=basedb basedb_test
 TEST_DB=students employee

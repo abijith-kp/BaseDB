@@ -203,8 +203,10 @@ void delete_table(int argc, char *argv[])
         {
             delete_index(metadata, i);
 
+            #ifdef INDEXED
             if (metadata->is_indexed)
                 g_hash_table_remove(metadata->index, data->options[metadata->primary_key]);
+            #endif
         }
         free(data);
         i = _i;
@@ -254,10 +256,13 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 
     write_row_as_data_struct(metadata, data, fd, pos);
 
+    #ifdef INDEXED
     if (metadata->is_indexed)
         g_hash_table_insert(metadata->index,
                             data->options[metadata->primary_key],
                             GINT_TO_POINTER(pos));
+    #endif
+
     close(fd);
 
     write_metadata(metadata, table);
@@ -305,6 +310,9 @@ void insert_table(int argc, char *argv[])
         }
     }
 
+    int index = -1;
+
+    #ifdef INDEXED
     if ((metadata->is_indexed) && (NULL == data->options[metadata->primary_key]))
     {
         printf("Primary key colomn cannot be null.\n");
@@ -312,8 +320,6 @@ void insert_table(int argc, char *argv[])
         return;
     }
 
-    int index = -1;
-    
     if (metadata->is_indexed)
     {
         char *key = data->options[metadata->primary_key];
@@ -325,6 +331,7 @@ void insert_table(int argc, char *argv[])
             index = GPOINTER_TO_INT(val);
         }
     }
+    #endif
 
     write_data(table, data, metadata, index);
     add_table_index(table, metadata);
@@ -354,11 +361,13 @@ void write_metadata(METADATA *metadata, char *table)
     pos = lseek(fd, 0, SEEK_CUR);
     write(fd, &(data_offset), sizeof(data_offset)); /* data start */
     write(fd, &(metadata->count), sizeof(metadata->count)); /* colomn count */
-    write(fd, &(metadata->size), sizeof(metadata->size));
+    write(fd, &(metadata->size), sizeof(metadata->size)); /* size of colomn */
 
+    #ifdef INDEXED
     write(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     write(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     write(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
+    #endif
 
     write(fd, metadata->column_list, sizeof(Column)*metadata->count);
 
@@ -403,9 +412,11 @@ METADATA *read_metadata(char *table)
     read(fd, &(metadata->count), sizeof(metadata->count));
     read(fd, &(metadata->size), sizeof(metadata->size)); /* size of record */
 
+    #ifdef INDEXED
     read(fd, &(metadata->is_indexed), sizeof(metadata->is_indexed));
     read(fd, &(metadata->primary_key), sizeof(metadata->primary_key));
     read(fd, &(metadata->key_offset), sizeof(metadata->key_offset));
+    #endif
 
     read(fd, metadata->column_list, sizeof(Column)*metadata->count);
 
@@ -424,8 +435,11 @@ METADATA *read_metadata(char *table)
     metadata->block_count = get_block_count(metadata->size);
     close(fd);
 
+    #ifdef INDEXED
     if (metadata->is_indexed)
         metadata->index = load_index(table, metadata);
+    #endif
+
     add_table_index(table, metadata);
     return metadata;
 }
@@ -443,10 +457,14 @@ int createtable(int argc, char *argv[])
     }
 
     metadata = calloc(1, sizeof(METADATA));
+
+    #ifdef INDEXED
     metadata->is_indexed = 0;
     metadata->primary_key = 0;
-    metadata->size = 0;
     metadata->key_offset = 0;
+    #endif
+
+    metadata->size = 0;
     metadata->count = (argc-2)/2;
     metadata->free = 0;
     metadata->head = 0;
@@ -512,6 +530,7 @@ void quit(int argc, char *argv[])
     printf("Quiting..\n");
 }
 
+#ifdef INDEXED
 GHashTable *load_index(char *table, METADATA *metadata)
 {
     GHashTable *index = g_hash_table_new(g_str_hash, g_str_equal);
@@ -581,6 +600,7 @@ void drop_index(int argc, char *argv[])
     metadata->index = NULL;
     write_metadata(metadata, table);
 }
+#endif
 
 void select_table(int argc, char *argv[])
 {
@@ -626,9 +646,11 @@ void help(int argc, char *argv[])
                             "create RELATION_NAME ( ATTR_NAME = FORMAT [ , ATTR_NAME = FORMAT ]* );",
                             "\tCreate a new table with RELATION_NAME and attributes with given FORMAT.\n",
                             "print RELATION_NAME;",
-                            "\tDumps all data in the table with name RELATION_NAME\n"
+                            "\tDumps all data in the table with name RELATION_NAME\n",
+                            #ifdef INDEXED
                             "buildindex for RELATION_NAME on ATTR_NAME;",
                             "dropindex for RELATION_NAME [ on ATTR_NAME ];",
+                            #endif
                             "select from RELATION_NAME where ( ATTR_NAME OP VALUE );",
                             "insert into RELATION_NAME ( ATTR_NAME = VALUE [ , ATTR_NAME = VALUE ]* );",
                             "delete from RELATION_NAME where ( ATTR_NAME OP VALUE );",

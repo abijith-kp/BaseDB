@@ -316,12 +316,14 @@ int tcode;
 	    case PRINT :
 		dump_table(pcount, ptr);
 		break;
+		#ifdef INDEXED
 	    case BUILDINDEX :
 		build_index(pcount, ptr);
 		break;
 	    case DROPINDEX :
 		drop_index(pcount, ptr);
 		break;
+		#endif
 	    case QUIT :
 		quit(pcount, ptr);
 		return (DONE);
