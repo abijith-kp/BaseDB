@@ -1,3 +1,24 @@
+
+How to run:
+===========
+
+**To test:**
+
+    make run_test
+
+**To run DB:**
+
+    make run
+
+If readline wrapper is installed. You could do:
+
+    make
+    rlwrap ./basedb
+
+
+Some notes on current status and futures ideas
+===============================================
+
 ==> One index should be created while creating the table itself.
 ==> If the index was changed in between:
     * Additional time would be taken to index the whole db.
@@ -7,7 +28,7 @@
 
 ==> Only one index allowed now.
 
-==> Table index will act like a write through cache. When ever the cache is updated the physical capy is also updated along with it.
+==> Table index will act like a write through cache. When ever the cache is updated the physical copy is also updated along with it.
 
 ==> Have to load index if any of the operations are done.
 
@@ -19,7 +40,7 @@
 
 ==> Test with large number of insertions
 
-        To be implemented:
+==> To be implemented:
         createdb DBNAME;
         destroydb DBNAME;
         opendb DBNAME;
@@ -37,3 +58,11 @@
 
 ==> check if the input is correct
 ==> implement support for float
+
+
+Acknowledgment
+===============
+
+MINIREL was originally conceived as an instructional RDBMS design student project by Professor David DeWitt of the University of Wisconsin.
+
+I have downloaded the minirel code from the web page of [Associate Prof. Murali Krishnan K](http://athena.nitc.ac.in/~kmurali/dbms/minirel.html)
