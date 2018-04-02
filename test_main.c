@@ -30,7 +30,7 @@ char *commands[][100] = {
                             {"print", "students", NULL},
                             {"select", "students", "sname", "=", "xyz", NULL},
                             {"buildindex", "students", "sname", NULL},
-                            {"select", "students", "sname", "=", "xyz", NULL},
+                            {"select", "students", "gpa", "=", "14", NULL},
                             {"delete", "students", "sname", "xyz", NULL},
                             {"print", "students", NULL},
                             {"insert", "students", "sname", "xyz", "sid", "5", "gpa", "14", NULL},
@@ -53,6 +53,7 @@ char *commands[][100] = {
 
                             {"print", "employee", NULL},
                             {"print", "students", NULL},
+
                             {"quit", NULL},
                             {NULL}
                          };

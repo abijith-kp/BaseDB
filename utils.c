@@ -11,7 +11,7 @@
 
 int get_first_index(METADATA *metadata)
 {
-    return metadata->first_record;
+    return metadata->start;
 }
 
 int get_next_index(METADATA *metadata, int cur_index)
@@ -21,15 +21,16 @@ int get_next_index(METADATA *metadata, int cur_index)
 
 int get_new_index(METADATA *metadata)
 {
-    return insert(metadata->records, &(metadata->first_record),
-                  &(metadata->last_record), &(metadata->data_end));
+    return insert(&(metadata->records), &(metadata->start),
+                  &(metadata->head), &(metadata->free),
+                  &(metadata->data_end));
 }
 
 void delete_index(METADATA *metadata, int index)
 {
-    delete_with_index(index, metadata->records,
-                &(metadata->first_record), &(metadata->last_record),
-                &(metadata->data_end));
+    delete_with_index(index, &(metadata->records),
+                &(metadata->start), &(metadata->head),
+                &(metadata->free), &(metadata->data_end));
 }
 
 char *read_row(METADATA *metadata, int fd, int index)

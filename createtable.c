@@ -87,7 +87,6 @@ int operation(char *data, int operator, char *value, char type)
     else if (type == 's')
         s = strncmp(data, value, STRING);
 
-    printf("operator: %s %d %s %d %d\n", data, s, value, STRING, strncmp(data, value, STRING));
     if (EQOP == operator)
         return s == 0;
     else if (GEOP == operator)
@@ -120,7 +119,6 @@ void get_pos_len_type(METADATA *metadata, char *attr, int *pos, int *len, char *
     {
         int l = 0;
         get_type_size(&l, metadata->types[j]);
-        printf("<<<<<<>>>>> %s %s\n", metadata->options[j], attr);
         if (0 == strcmp(metadata->options[j], attr))
         {
             if (len)
@@ -186,7 +184,7 @@ void delete_table(int argc, char *argv[])
         return;
     }
 
-    METADATA *metadata = read_metadata(table);
+   METADATA *metadata = read_metadata(table);
 
     int fd = open(table, O_RDONLY);
     
@@ -194,16 +192,13 @@ void delete_table(int argc, char *argv[])
     int index = 0;
     get_pos_len_type(metadata, attr, NULL, NULL, &type, &index);
 
-    // int i = get_first_index(metadata);
-    int i = metadata->first_record;
-    while (i != metadata->last_record)
+    int i = get_first_index(metadata);
+    while (i != 0)
     {
         int _i = get_next_index(metadata, i);
-        printf("[%d %d]\n", i, _i);
 
         METADATA *data = get_row_as_data_struct(metadata, fd, i);
 
-        printf("%s %d %s %c %d\n", data->options[index], operator, value, type, operation(data->options[index], operator, value, type));
         if (operation(data->options[index], operator, value, type))
         {
             delete_index(metadata, i);
@@ -215,24 +210,6 @@ void delete_table(int argc, char *argv[])
         }
         free(data);
         i = _i;
-    }
-
-    METADATA *data;
-    if (i == metadata->last_record)
-    {
-        data = get_row_as_data_struct(metadata, fd, i);
-        printf("%s %d %s %c %d\n", data->options[index], operator, value, type, operation(data->options[index], operator, value, type));
-
-        if (operation(data->options[index], operator, value, type))
-        {
-            delete_index(metadata, i);
-
-            /*
-            if (metadata->is_indexed)
-                g_hash_table_remove(metadata->index, data->options[metadata->primary_key]);
-            */
-        }
-        free(data);
     }
 
     close(fd);
@@ -255,20 +232,12 @@ void dump_table(int argc, char *argv[])
     int fd = open(table, O_RDONLY);
     int i = 0;
 
-    if (get_first_index(metadata) == 0)
+    if (metadata->head == 0)
         return;
 
-    printf("%d |||| %d\n", metadata->first_record, metadata->last_record);
-
-    for (i=get_first_index(metadata); i!=metadata->last_record; i=get_next_index(metadata, i))
-    {
-        printf("???? %d %d\n", i, get_next_index(metadata, i));
+    for (i=get_first_index(metadata); i!=0; i=get_next_index(metadata, i))
         print_row(metadata, fd, i);
-    }
     
-    if (i == metadata->last_record)
-        print_row(metadata, fd, i);
-
     close(fd);
 }
 
@@ -296,8 +265,10 @@ void write_data(char *table, METADATA *data, METADATA *metadata, int pos)
 
     close(fd);
 
+    /*
     if (pos > metadata->data_end)
         metadata->data_end = pos;
+    */
     write_metadata(metadata, table);
 }
 
@@ -385,6 +356,7 @@ void write_metadata(METADATA *metadata, char *table)
     write(fd, &(metadata->time_stamp), sizeof(metadata->time_stamp));
     write(fd, &(metadata->table_name), sizeof(metadata->table_name));
     write(fd, &(metadata->active_records), sizeof(metadata->active_records));
+    save_list_v2(metadata->records, metadata->data_offset, fd, &(metadata->first_record), &(metadata->last_record), metadata->start, metadata->head, metadata->free, metadata->data_end);
     write(fd, &(metadata->data_end), sizeof(metadata->data_end));
     write(fd, &(metadata->first_record), sizeof(metadata->first_record));
     write(fd, &(metadata->last_record), sizeof(metadata->last_record));
@@ -409,8 +381,8 @@ void write_metadata(METADATA *metadata, char *table)
     /*
     save_list(metadata->records, metadata->next, metadata->prev,
               MAX_RECORDS);
+    save_list_v2(metadata->records, metadata->data_offset, fd, &(metadata->first_record), &(metadata->last_record), metadata->start, metadata->head, metadata->free, metadata->data_end);
     */
-    save_list_v2(metadata->records, metadata->data_offset, fd, metadata->first_record, metadata->last_record, metadata->data_end);
     write(fd, &(metadata->next), sizeof(metadata->next));
     write(fd, &(metadata->prev), sizeof(metadata->prev));
 
@@ -482,14 +454,12 @@ METADATA *read_metadata(char *table)
     }
     metadata->types = types;
 
-    for (int i=0; i<metadata->count; i++)
-        printf(">>> %s %c %s %c\n", metadata->column_list[i].col_name, metadata->column_list[i].data_type, metadata->options[i], metadata->types[i]);
-
     /*
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 0);
     */
-    metadata->records = init_list_v2(fd, metadata->data_offset, metadata->data_end);
+    metadata->records = init_list_v2(fd, metadata->data_offset, &(metadata->data_end), &(metadata->free), &(metadata->head), &(metadata->start),
+                            &(metadata->first_record), &(metadata->last_record));
     metadata->block_count = get_block_count(metadata->size);
     close(fd);
 
@@ -520,18 +490,19 @@ int createtable(int argc, char *argv[])
     metadata->key_offset = 0;
     metadata->count = (argc-2)/2;
     metadata->free = 0;
-    metadata->head = -1;
-    metadata->start = -1;
+    metadata->head = 0;
+    metadata->start = 1;
 
-    metadata->first_record = 0;
-    metadata->last_record = 1;
+    metadata->first_record = 1;
+    metadata->last_record = 0;
     metadata->data_end = 0;
 
     /*
     metadata->records = init_list(metadata->next, metadata->prev,
                                      MAX_RECORDS, 1);
     */
-    metadata->records = init_list_v2(-1, metadata->data_offset, metadata->data_end);
+    metadata->records = init_list_v2(-1, metadata->data_offset, &(metadata->data_end), &(metadata->free), &(metadata->head), &(metadata->start),
+                            &(metadata->first_record), &(metadata->last_record));
 
     char *types = calloc(metadata->count, sizeof(char));
     int s = 0;
@@ -679,13 +650,12 @@ void select_table(int argc, char *argv[])
     get_pos_len_type(metadata, attr, NULL, NULL, &type, &index);
 
     print_header(metadata);
-    for (int i=get_first_index(metadata); i!=-1; i=get_next_index(metadata, i))
+    for (int i=get_first_index(metadata); i!=0; i=get_next_index(metadata, i))
     {
         METADATA *data = get_row_as_data_struct(metadata, fd, i);
 
         if (operation(data->options[index], operator, value, type))
             print_row(metadata, fd, i);
-
         free(data);
     }
 
