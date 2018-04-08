@@ -7,6 +7,12 @@
 #include <string.h>
 #include <ctype.h>
 
+#define YES_ALL 3
+#define YES 2
+#define NO_ALL 1
+#define NO 0
+#define DEF -1
+
 #include "fes.h"
 #include "utils.h"
 #include "createtable.h"
@@ -327,7 +333,17 @@ void insert_table(int argc, char *argv[])
         gboolean ret = g_hash_table_lookup_extended(metadata->index, key, NULL, &val);
         if (ret)
         {
-            printf("Key already existing. Overwriting the data..\n");
+            int opt = 0;
+            printf("Key already existing. Overwrite data? [NO(0), YES(2)]: ");
+            scanf("%d", &opt);
+            if (opt == NO)
+            {
+                printf("Skiping data write...\n");
+                free(data);
+                return;
+            }
+            
+            printf("Overwriting data...\n");
             index = GPOINTER_TO_INT(val);
         }
     }
@@ -538,6 +554,7 @@ GHashTable *load_index(char *table, METADATA *metadata)
     if (metadata->head == 0)
         return index;
     
+    int opt = DEF;
     int fd = open(table, O_RDONLY);
     int i = get_first_index(metadata);
     while (i != 0)
@@ -549,7 +566,36 @@ GHashTable *load_index(char *table, METADATA *metadata)
         gpointer val;
         gboolean ret = g_hash_table_lookup_extended(index, key, NULL, &val);
         if ((ret) || (0 == strlen(key)))
+        {
+            if (opt == DEF)
+            {
+                printf("Duplicate key: %s\n", key);
+                printf("Overwrite? [NO(0), No_to_all(1), Yes(2), Yes_to_all(3)]: ");
+                scanf("%d", &opt);
+                printf("\n");
+
+                if (opt == NO)
+                {
+                    opt = DEF;
+                    delete_index(metadata, GPOINTER_TO_INT(i));
+                    continue;
+                }
+                else if (opt == YES)
+                    opt = DEF;
+                else if (opt == NO_ALL)
+                {
+                    delete_index(metadata, GPOINTER_TO_INT(i));
+                    continue;
+                }
+            }
+            else if (opt == NO_ALL)
+            {
+                delete_index(metadata, GPOINTER_TO_INT(i));
+                continue;
+            }
+
             delete_index(metadata, GPOINTER_TO_INT(val));
+        }
 
         g_hash_table_insert(index, key, GINT_TO_POINTER(i));
         i = _i;
