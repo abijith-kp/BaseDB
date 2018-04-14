@@ -119,6 +119,26 @@ void get_type_size(int *len, char type)
         *len = STRING;
 }
 
+void set_data_type(char *c, char type)
+{
+    if (type == 'i')
+        *c = ((*c>>3)<<3) | 0;
+    else if (type == 'f')
+        *c = ((*c>>3)<<3) | 1;
+    else if (type == 's')
+        *c = ((*c>>3)<<3) | 2;
+}
+
+char get_data_type(char c)
+{
+    if ((c & 7) == 0)
+        return 'i';
+    else if ((c & 7) == 1)
+        return 'f';
+    else if ((c & 7) == 2)
+        return 's';
+}
+
 void get_pos_len_type(METADATA *metadata, char *attr, int *pos, int *len, char *type, int *index)
 {
     for (int j=0; j<metadata->count; j++)
@@ -390,7 +410,7 @@ void write_metadata(METADATA *metadata, char *table)
     for (int i=0; i<metadata->count; i++)
     {
         strncpy(metadata->options[i], metadata->column_list[i].col_name, COLUMN_NAME_SIZE);
-        metadata->types[i] = metadata->column_list[i].data_type;
+        metadata->types[i] = get_data_type(metadata->column_list[i].data_type);
     }
 
     data_offset = lseek(fd, 0, SEEK_CUR);
@@ -441,7 +461,7 @@ METADATA *read_metadata(char *table)
     {
         char *t = calloc(COLUMN_NAME_SIZE, sizeof(char));
         strncpy(t, metadata->column_list[i].col_name, COLUMN_NAME_SIZE);
-        types[i] = metadata->column_list[i].data_type;
+        types[i] = get_data_type(metadata->column_list[i].data_type);
         metadata->options[i] = t;
     }
     metadata->types = types;
@@ -505,7 +525,7 @@ int createtable(int argc, char *argv[])
         strncpy(metadata->column_list[j].col_name, t, COLUMN_NAME_SIZE);
 
         types[j] = argv[i+1][0];
-        metadata->column_list[j].data_type = types[j];
+        set_data_type(&(metadata->column_list[j].data_type), types[j]);
         
         get_type_size(&s, argv[i+1][0]);
         metadata->size += s;
